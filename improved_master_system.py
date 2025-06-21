@@ -2,6 +2,7 @@
 """
 Improved Master Speech Recognition System
 Properly understands speech, records to CSV, progresses through items
+Now includes multi-number calling for Harshit Khemani and Sidharth Sharma
 """
 
 import os
@@ -53,6 +54,13 @@ TWILIO_ACCOUNT_SID = "AC820daae89092e30fee3487e80162d2e2"
 TWILIO_AUTH_TOKEN = "690636dcdd752868f4e77648dc0d49eb"
 TWILIO_FROM_NUMBER = "+14323484517"
 DEFAULT_PHONE = "+918800000488"
+
+# Contact list for multi-number calling
+CONTACT_LIST = {
+    "Harshit Khemani": "+918800000488",
+    "Sidharth Sharma": "+919876788808",
+    "Test Number": "+918800000488"  # Default fallback
+}
 
 def print_live_feedback(message, category="INFO"):
     """Print live feedback with timestamps and colors"""
@@ -442,9 +450,9 @@ def start_ngrok():
         print_live_feedback(f"Failed to start ngrok: {e}", "ERROR")
         return None, None
 
-def make_speech_call(phone_number, ngrok_url):
+def make_speech_call(phone_number, ngrok_url, contact_name="Unknown"):
     """Make a call with speech recognition"""
-    print_live_feedback(f"Making call to {phone_number}", "CALL")
+    print_live_feedback(f"Making call to {contact_name} ({phone_number})", "CALL")
     
     # Reset progress for new call
     global current_item_index, collected_items
@@ -481,6 +489,7 @@ def make_speech_call(phone_number, ngrok_url):
         if response.status_code == 201:
             call_data = response.json()
             print_live_feedback(f"Call started! SID: {call_data['sid']}", "SUCCESS")
+            print_live_feedback(f"Calling {contact_name}", "SUCCESS")
             print_live_feedback(f"Will ask for: {', '.join(required_items)}", "INFO")
             return call_data['sid']
         else:
@@ -490,6 +499,47 @@ def make_speech_call(phone_number, ngrok_url):
     except Exception as e:
         print_live_feedback(f"Call error: {e}", "ERROR")
         return False
+
+def call_multiple_contacts(contact_names, ngrok_url, delay_between_calls=30):
+    """Call multiple contacts sequentially"""
+    successful_calls = []
+    
+    for contact_name in contact_names:
+        if contact_name in CONTACT_LIST:
+            phone_number = CONTACT_LIST[contact_name]
+            print_live_feedback("="*60, "INFO")
+            print_live_feedback(f"CALLING: {contact_name}", "CALL")
+            print_live_feedback("="*60, "INFO")
+            
+            call_sid = make_speech_call(phone_number, ngrok_url, contact_name)
+            
+            if call_sid:
+                successful_calls.append({
+                    'name': contact_name,
+                    'phone': phone_number,
+                    'call_sid': call_sid,
+                    'timestamp': datetime.now().isoformat()
+                })
+                print_live_feedback(f"✅ Successfully called {contact_name}", "SUCCESS")
+                
+                # Wait between calls if more contacts to call
+                if contact_name != contact_names[-1]:  # Not the last contact
+                    print_live_feedback(f"Waiting {delay_between_calls} seconds before next call...", "INFO")
+                    time.sleep(delay_between_calls)
+            else:
+                print_live_feedback(f"❌ Failed to call {contact_name}", "ERROR")
+        else:
+            print_live_feedback(f"❌ Contact '{contact_name}' not found in contact list", "ERROR")
+    
+    return successful_calls
+
+def show_contact_list():
+    """Display available contacts"""
+    print("\n📞 AVAILABLE CONTACTS:")
+    print("="*40)
+    for i, (name, phone) in enumerate(CONTACT_LIST.items(), 1):
+        print(f"   {i}. {name}: {phone}")
+    return list(CONTACT_LIST.keys())
 
 def start_webhook_server():
     """Start the Flask webhook server"""
@@ -502,6 +552,7 @@ def main():
     """Main function to orchestrate everything"""
     print("🚀 IMPROVED SPEECH RECOGNITION SYSTEM")
     print("🧠 Smart Item Progression + CSV Recording")
+    print("📞 Multi-Number Calling: Harshit & Sidharth")
     print("=" * 70)
     
     # Step 1: Start ngrok
@@ -535,30 +586,122 @@ def main():
         print("\n" + "="*50)
         print("🎤 IMPROVED SPEECH RECOGNITION SYSTEM")
         print("="*50)
-        print("1. 📞 Make call with smart progression")
-        print("2. 📊 Show collected items")
-        print("3. 📄 View CSV file")
-        print("4. 🌐 Show system status")
-        print("5. ❌ Exit")
+        print("1. 📞 Call single contact")
+        print("2. 📞 Call from contact list")
+        print("3. 📞 Call both Harshit & Sidharth")
+        print("4. 📞 Call multiple contacts")
+        print("5. 📊 Show collected items")
+        print("6. 📄 View CSV file")
+        print("7. 🌐 Show system status")
+        print("8. ❌ Exit")
         
-        choice = input("\nChoose option (1-5): ").strip()
+        choice = input("\nChoose option (1-8): ").strip()
         
         if choice == "1":
             phone = input(f"Phone number ({DEFAULT_PHONE}): ").strip()
             if not phone:
                 phone = DEFAULT_PHONE
             
+            contact_name = input("Contact name (optional): ").strip() or "Manual Entry"
+            
             print_live_feedback("="*60, "INFO")
             print_live_feedback("MAKING SMART PROCUREMENT CALL", "CALL")
             print_live_feedback(f"Items to collect: {', '.join(required_items)}", "INFO")
             print_live_feedback("="*60, "INFO")
             
-            call_sid = make_speech_call(phone, ngrok_url)
+            call_sid = make_speech_call(phone, ngrok_url, contact_name)
             if call_sid:
                 print_live_feedback("Call initiated! Watch for automatic progression:", "SUCCESS")
                 print_live_feedback("System will ask for each item and save to CSV", "INFO")
-            
+        
         elif choice == "2":
+            contacts = show_contact_list()
+            try:
+                selection = int(input(f"\nSelect contact (1-{len(contacts)}): "))
+                if 1 <= selection <= len(contacts):
+                    selected_contact = contacts[selection-1]
+                    phone_number = CONTACT_LIST[selected_contact]
+                    
+                    print_live_feedback("="*60, "INFO")
+                    print_live_feedback(f"CALLING: {selected_contact}", "CALL")
+                    print_live_feedback(f"Items to collect: {', '.join(required_items)}", "INFO")
+                    print_live_feedback("="*60, "INFO")
+                    
+                    call_sid = make_speech_call(phone_number, ngrok_url, selected_contact)
+                    if call_sid:
+                        print_live_feedback("Call initiated! Watch for automatic progression:", "SUCCESS")
+                        print_live_feedback("System will ask for each item and save to CSV", "INFO")
+                else:
+                    print("❌ Invalid selection")
+            except ValueError:
+                print("❌ Invalid input")
+        
+        elif choice == "3":
+            # Call both Harshit and Sidharth specifically
+            target_contacts = ["Harshit Khemani", "Sidharth Sharma"]
+            
+            print_live_feedback("="*60, "INFO")
+            print_live_feedback("CALLING BOTH HARSHIT & SIDHARTH", "CALL")
+            print_live_feedback(f"Items to collect: {', '.join(required_items)}", "INFO")
+            print_live_feedback("="*60, "INFO")
+            
+            delay = input("Delay between calls in seconds (30): ").strip()
+            try:
+                delay = int(delay) if delay else 30
+            except ValueError:
+                delay = 30
+            
+            successful_calls = call_multiple_contacts(target_contacts, ngrok_url, delay)
+            
+            if successful_calls:
+                print_live_feedback(f"✅ Successfully initiated {len(successful_calls)} calls", "SUCCESS")
+                for call_info in successful_calls:
+                    print_live_feedback(f"   • {call_info['name']}: {call_info['call_sid']}", "SUCCESS")
+            else:
+                print_live_feedback("❌ No calls were successful", "ERROR")
+        
+        elif choice == "4":
+            contacts = show_contact_list()
+            print("\nEnter contact numbers to call (comma-separated, e.g., 1,2,3):")
+            selections = input("Selections: ").strip()
+            
+            try:
+                selected_indices = [int(x.strip()) for x in selections.split(',')]
+                selected_contacts = []
+                
+                for idx in selected_indices:
+                    if 1 <= idx <= len(contacts):
+                        selected_contacts.append(contacts[idx-1])
+                    else:
+                        print(f"❌ Invalid selection: {idx}")
+                
+                if selected_contacts:
+                    print_live_feedback("="*60, "INFO")
+                    print_live_feedback(f"CALLING MULTIPLE CONTACTS: {', '.join(selected_contacts)}", "CALL")
+                    print_live_feedback(f"Items to collect: {', '.join(required_items)}", "INFO")
+                    print_live_feedback("="*60, "INFO")
+                    
+                    delay = input("Delay between calls in seconds (30): ").strip()
+                    try:
+                        delay = int(delay) if delay else 30
+                    except ValueError:
+                        delay = 30
+                    
+                    successful_calls = call_multiple_contacts(selected_contacts, ngrok_url, delay)
+                    
+                    if successful_calls:
+                        print_live_feedback(f"✅ Successfully initiated {len(successful_calls)} calls", "SUCCESS")
+                        for call_info in successful_calls:
+                            print_live_feedback(f"   • {call_info['name']}: {call_info['call_sid']}", "SUCCESS")
+                    else:
+                        print_live_feedback("❌ No calls were successful", "ERROR")
+                else:
+                    print("❌ No valid contacts selected")
+                    
+            except ValueError:
+                print("❌ Invalid input format")
+            
+        elif choice == "5":
             print(f"\n📊 COLLECTED ITEMS ({len(collected_items)}/{len(required_items)}):")
             if collected_items:
                 for item, details in collected_items.items():
@@ -570,7 +713,7 @@ def main():
             else:
                 print("No items collected yet.")
         
-        elif choice == "3":
+        elif choice == "6":
             csv_filename = f"procurement_quotes_{datetime.now().strftime('%Y%m%d')}.csv"
             if os.path.exists(csv_filename):
                 print(f"\n📄 CSV FILE: {csv_filename}")
@@ -579,15 +722,16 @@ def main():
             else:
                 print("No CSV file found yet.")
         
-        elif choice == "4":
+        elif choice == "7":
             print(f"\n🌐 SYSTEM STATUS:")
             print(f"   Ngrok URL: {ngrok_url}")
             print(f"   Server: {'✅ Running' if server_running else '❌ Stopped'}")
             print(f"   Gemini AI: {'✅ Ready' if model else '❌ Not configured'}")
             print(f"   Progress: {current_item_index}/{len(required_items)} items")
             print(f"   Collected: {len(collected_items)} items")
+            print(f"   Available Contacts: {len(CONTACT_LIST)}")
         
-        elif choice == "5":
+        elif choice == "8":
             print_live_feedback("Shutting down system...", "INFO")
             if ngrok_process:
                 ngrok_process.terminate()
