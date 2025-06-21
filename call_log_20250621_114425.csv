@@ -1,0 +1,78 @@
+timestamp,vendor_name,vendor_phone,stage,stage_number,vendor_speech,ai_analysis
+2025-06-21T11:44:07.522031,ABC Medical Supplies,+91-9876543210,greeting,1,"Hello, ABC Medical Supplies, main Rajesh bol raha hun. Kaise help kar sakta hun?","```json
+{
+  ""intent"": ""Greeting and offering assistance."",
+  ""extracted_info"": ""None"",
+  ""emotional_tone"": ""Friendly and business-like."",
+  ""your_response"": ""Namaste Rajesh Ji, ABC Medical Supplies.  Thanks for reaching out.  How can I help Bio Mac Lifesciences today?"",
+  ""next_action"": ""Ask the vendor about their company's capabilities and the specific medical supplies they offer for potential procurement.""
+}
+```
+"
+2025-06-21T11:44:10.386737,ABC Medical Supplies,+91-9876543210,introduction_response,2,"Haan sir, laboratory supplies ki baat kar sakte hain. Aap kya chahiye?","```json
+{
+  ""intent"": ""Vendor is ready to discuss laboratory supplies and interested in a potential procurement."",
+  ""extracted_info"": ""None"",
+  ""emotional_tone"": ""Business-like and positive."",
+  ""your_response"": ""Namaste Rajesh Ji,  Good to hear that you're interested in discussing laboratory supplies.  Bio Mac Lifesciences is looking for various laboratory supplies. Could you tell me more about the types of laboratory supplies your company offers? What specific products or services are you experienced in providing?"",
+  ""next_action"": ""Inquire about the vendor's product portfolio, capabilities, and experience in detail.  Begin to understand their specific expertise in the laboratory supply area.  Listen for potential specialization or specific brands they may carry.  Identify their pricing strategy or available terms.""
+}
+```
+"
+2025-06-21T11:44:13.665390,ABC Medical Supplies,+91-9876543210,item1_quote,3,Petri dishes ka rate 45 rupees per piece hai sir. 100mm sterile wale.,"```json
+{
+  ""intent"": ""Providing a price quote for Petri dishes."",
+  ""extracted_info"": {
+    ""product"": ""Petri dishes"",
+    ""size"": ""100mm"",
+    ""sterile"": true,
+    ""price"": ""45 rupees per piece""
+  },
+  ""emotional_tone"": ""Business-like and straightforward."",
+  ""your_response"": ""Okay Rajesh Ji, 45 rupees per piece for 100mm sterile Petri dishes.  That's noted.  Could you please provide details on the quantity discounts you offer and the minimum order quantity?  Also, what are the lead times for this item?"",
+  ""next_action"": ""Obtain more detailed pricing information (quantity discounts, minimum order quantities), and logistical details (lead times).  Begin to assess if the quoted price and terms are competitive and suitable for Bio Mac Lifesciences' needs.  Ask about other relevant laboratory supplies they offer, and if they have different sizes or types of Petri dishes.""
+}
+```
+"
+2025-06-21T11:44:16.942615,ABC Medical Supplies,+91-9876543210,item2_quote,4,"Laboratory gloves, nitrile powder-free, 60 rupees per piece milenge.","```json
+{
+  ""intent"": ""Providing a price quote for laboratory gloves."",
+  ""extracted_info"": {
+    ""product"": ""Laboratory gloves"",
+    ""type"": ""nitrile powder-free"",
+    ""price"": ""60 rupees per piece""
+  },
+  ""emotional_tone"": ""Business-like and straightforward."",
+  ""your_response"": ""Okay Rajesh Ji, 60 rupees per piece for nitrile powder-free laboratory gloves.  That's helpful.  Could you please provide details on the sizes available, the packaging (e.g., boxes, bulk), and any quantity discounts for bulk orders?  Also, what are the lead times for this item?"",
+  ""next_action"": ""Obtain more detailed pricing information (quantity discounts, packaging options, sizes), and logistical details (lead times).  Assess the quoted price and terms against potential competitors and Bio Mac Lifesciences' needs.  Inquire about additional relevant laboratory supplies.  Consider if this vendor is a suitable supplier for the overall needs of Bio Mac Lifesciences.  Perhaps ask about certifications or quality standards.""
+}
+```
+"
+2025-06-21T11:44:20.528923,ABC Medical Supplies,+91-9876543210,bulk_discount,5,Bulk order hai to 10% discount de sakte hain sir. Minimum 100 pieces.,"```json
+{
+  ""intent"": ""Offering a bulk discount on Petri dishes and other laboratory supplies."",
+  ""extracted_info"": {
+    ""discount_percentage"": ""10%"",
+    ""minimum_order_quantity"": ""100 pieces"",
+	""product_implication"": ""Applicable to bulk orders of Petri dishes and likely other lab supplies mentioned previously""
+  },
+  ""emotional_tone"": ""Business-like and straightforward."",
+  ""your_response"": ""Okay Rajesh Ji,  10% discount on orders of 100 or more Petri dishes. That's good to know.  Could you please confirm if this 10% discount applies to the other items we discussed earlier (e.g., laboratory gloves) as well, and if there's a different minimum order quantity for those, or a combination of items?"",
+  ""next_action"": ""Clarify if the 10% discount applies to the previous items mentioned, and if different minimum order quantities exist for each.  Verify the applicability of this discount on possible combined orders. Verify the exact terms and conditions to confirm the discounted pricing for different products.  If possible, request a detailed breakdown of the discount structure and any associated conditions.  Begin comparing this vendor's pricing against potential alternatives and ensure the discount aligns with Bio Mac Lifesciences' overall purchasing strategy.""
+}
+```
+"
+2025-06-21T11:44:24.033686,ABC Medical Supplies,+91-9876543210,closing,6,Transport charges 200 rupees extra lagenge sir. GST 18% alag hai.,"```json
+{
+  ""intent"": ""Providing additional cost details for transport and GST."",
+  ""extracted_info"": {
+    ""transport_charge"": ""200 rupees extra"",
+    ""gst"": ""18%"",
+    ""gst_description"": ""separate from other charges""
+  },
+  ""emotional_tone"": ""Business-like and straightforward."",
+  ""your_response"": ""Okay Rajesh Ji, I understand the transport charge of 200 rupees extra.  And the GST of 18% is separate. Could you please provide a breakdown of the total cost, including transport and GST, for a sample order of [mention a reasonable quantity, e.g., 100 pieces of nitrile gloves]? This will help us in finalizing the order."",
+  ""next_action"": ""Request a total cost breakdown including transport and GST for a sample order.  Calculate the overall cost of the items ordered and compare it against competitors and the budget.  Confirm if the vendor's pricing, including transport and GST, aligns with Bio Mac Lifesciences' expectations and purchasing strategy. In case there are differences, decide whether to proceed with the deal or explore other options.  Proceed to the closing stage if the price and terms are agreeable.""
+}
+```
+"

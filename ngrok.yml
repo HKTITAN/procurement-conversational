@@ -1,0 +1,7 @@
+version: "2"
+authtoken: YOUR_AUTH_TOKEN_HERE
+tunnels:
+  webhook:
+    proto: http
+    addr: 5000
+    subdomain: biomac-webhook  # optional custom subdomain

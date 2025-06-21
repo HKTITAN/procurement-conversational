@@ -19,7 +19,7 @@ VENDOR_PHONE = "+918800000488"
 CLIENT_NAME = "Bio Mac Lifesciences"
 
 # Your ngrok webhook URL
-WEBHOOK_BASE_URL = "https://543a-2401-4900-1c30-31b1-c11a-e61b-78b3-ce01.ngrok-free.app"
+WEBHOOK_BASE_URL = "https://59b6-2401-4900-1c66-9039-5c24-977c-347-d277.ngrok-free.app"
 
 def make_simple_call():
     """Make a simple call using requests library instead of Twilio SDK"""

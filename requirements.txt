@@ -3,4 +3,10 @@ flask==3.0.0
 pandas==2.1.4
 requests==2.31.0
 python-dotenv==1.0.0
-numpy==1.24.4 
+numpy==1.24.4
+google-generativeai==0.8.3
+google-genai==0.11.0
+websockets==12.0
+pyaudio==0.2.14
+librosa==0.10.1
+soundfile==0.12.1 

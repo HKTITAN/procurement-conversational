@@ -1,0 +1,7 @@
+timestamp,call_sid,item_name,price,unit,currency,minimum_order,delivery_time,discount_info,vendor_notes
+2025-06-21T12:54:04.781334,CA903d96cbb78ac99c8c5179aed235b47f,Petri dishes,30,per unit,INR,,,,
+2025-06-21T12:55:04.086621,CA903d96cbb78ac99c8c5179aed235b47f,Laboratory gloves,50,per piece,INR,,,,
+2025-06-21T12:56:05.389516,CA903d96cbb78ac99c8c5179aed235b47f,Microscope slides,50,per box,INR,,,,12 slides per box
+2025-06-21T12:58:01.066008,CAcb6b05c99d1806f48df5d86cea7586b2,Petri dishes,20,per piece,INR,,,,
+2025-06-21T12:58:47.490964,CAcb6b05c99d1806f48df5d86cea7586b2,Laboratory gloves,50,per unit,INR,,,,
+2025-06-21T12:59:18.600408,CAcb6b05c99d1806f48df5d86cea7586b2,Microscope slides,50,per unit,INR,,15 तारीख को,,एक बॉक्स विद तो
