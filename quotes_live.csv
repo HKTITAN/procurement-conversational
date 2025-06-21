@@ -1,0 +1,7 @@
+timestamp,vendor,item,price,call_sid,speech
+2025-06-20T17:51:56.733258,Harshit Khemani,Petri Dishes 100mm,40.0,CAa520833971d6d3ed27a940a8e1cf72dd,It's 40 to be together.
+2025-06-20T18:02:27.883053,Harshit Khemani,Petri Dishes 100mm,400.0,INR,CAb2bbe890f158a3817be56162cf40d32f,It is 400 rupees.,Voice
+2025-06-20T18:02:57.686232,Harshit Khemani,Laboratory Gloves Nitrile,50.0,INR,CAb2bbe890f158a3817be56162cf40d32f,50 rupees,Voice
+2025-06-20T18:13:13.307617,Harshit Khemani,Petri Dishes 100mm,30.0,INR,CA0704637db836e2d9a4deba8ecdc951a0,30 rupees.,Voice,English-Primary,high
+2025-06-20T18:13:48.674025,Harshit Khemani,Laboratory Gloves Nitrile,25.0,INR,CA0704637db836e2d9a4deba8ecdc951a0,25 rupees.,Voice,English-Primary,high
+2025-06-20T18:41:08.615641,Harshit Khemani,Laboratory Gloves Nitrile,50.0,INR,CAf0cd1a9abbac6f5dece7adfbc1f57048,50 rupees.,Voice,English-Primary,high
