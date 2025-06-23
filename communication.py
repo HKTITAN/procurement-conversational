@@ -27,7 +27,7 @@ class CommunicationService:
     def __init__(self):
         # Twilio credentials with fallback
         self.account_sid = os.getenv('TWILIO_ACCOUNT_SID', 'AC820daae89092e30fee3487e80162d2e2')
-        self.auth_token = os.getenv('TWILIO_AUTH_TOKEN', '7ef5e5b670b37b3b15faf333eef7f314')
+        self.auth_token = os.getenv('TWILIO_AUTH_TOKEN', '76d105c3d0bdee08cfc97117a7c05b32')
         self.from_number = os.getenv('TWILIO_FROM_NUMBER', '+14323484517')
         self.whatsapp_from = os.getenv('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886')
         

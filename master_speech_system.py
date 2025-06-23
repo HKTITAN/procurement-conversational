@@ -126,7 +126,7 @@ failed_calls = {}  # Track failed calls for WhatsApp fallback
 
 # Twilio credentials
 TWILIO_ACCOUNT_SID = "AC820daae89092e30fee3487e80162d2e2"
-TWILIO_AUTH_TOKEN = "7ef5e5b670b37b3b15faf333eef7f314"
+TWILIO_AUTH_TOKEN = "76d105c3d0bdee08cfc97117a7c05b32"
 TWILIO_FROM_NUMBER = "+14323484517"
 TWILIO_WHATSAPP_FROM = "whatsapp:+14155238886"  # Twilio WhatsApp sandbox number
 DEFAULT_PHONE = "+918800000488"

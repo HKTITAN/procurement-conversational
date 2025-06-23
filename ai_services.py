@@ -212,30 +212,30 @@ class AIService:
         Vendor Speech: "{vendor_speech}"
         
         Extract and return JSON with these fields:
-        {
+        {{
             "items_mentioned": ["item1", "item2"],
             "prices": [
-                {"item": "item_name", "price": 45, "unit": "per piece", "currency": "INR", "details": "details"}
+                {{"item": "item_name", "price": 45, "unit": "per piece", "currency": "INR", "details": "details"}}
             ],
             "availability": [
-                {"item": "item_name", "status": "in_stock", "quantity": "available quantity"}
+                {{"item": "item_name", "status": "in_stock", "quantity": "available quantity"}}
             ],
-            "delivery_info": {
+            "delivery_info": {{
                 "time": "delivery time",
                 "charges": "delivery charges",
                 "conditions": "conditions"
-            },
-            "contact_info": {
+            }},
+            "contact_info": {{
                 "person": "contact person",
                 "phone": "phone number",
                 "company": "company name"
-            },
+            }},
             "payment_terms": "payment conditions",
             "discounts": "discount information",
             "minimum_order": "minimum order requirements",
             "sentiment": "positive/neutral/negative",
             "quality_info": "quality standards mentioned"
-        }
+        }}
         
         Instructions:
         1. Extract all relevant business information

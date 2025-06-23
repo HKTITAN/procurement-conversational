@@ -94,29 +94,22 @@ class ProcurementWebServer:
             try:
                 companies = db.get_all_companies()
                 
-                companies_data = []
-                for company in companies.values():
+                # Add additional computed fields to each company for display
+                # but keep the dictionary structure that templates expect
+                for company_id, company in companies.items():
                     low_stock_items = company.get_low_stock_items()
-                    companies_data.append({
-                        'company_id': company.company_id,
-                        'name': company.name,
-                        'industry': company.industry,
-                        'contact_person': company.contact_person,
-                        'phone': company.phone,
-                        'email': company.email,
-                        'budget_monthly': company.budget_monthly,
-                        'procurement_priority': company.procurement_priority,
-                        'low_stock_count': len(low_stock_items),
-                        'inventory_value': company.get_total_inventory_value(),
-                        'status': 'critical' if len(low_stock_items) > 2 else 'warning' if len(low_stock_items) > 0 else 'normal',
-                        'total_items': len(company.inventory) if company.inventory else 0
-                    })
+                    
+                    # Add computed fields as attributes (non-persistent)
+                    company._low_stock_count = len(low_stock_items)
+                    company._inventory_value = company.get_total_inventory_value()
+                    company._status = 'critical' if len(low_stock_items) > 2 else 'warning' if len(low_stock_items) > 0 else 'normal'
+                    company._total_items = len(company.inventory) if company.inventory else 0
                 
                 return render_template('companies.html', 
                                      title='Companies Management',
                                      active_page='companies',
                                      page_icon='building',
-                                     companies=companies_data)
+                                     companies=companies)
                 
             except Exception as e:
                 print(f"❌ Companies page error: {e}")
@@ -613,6 +606,7 @@ class ProcurementWebServer:
         def api_companies():
             try:
                 companies = db.get_all_companies()
+                # Return list for API usage (form dropdowns, etc.)
                 return jsonify([{
                     'company_id': company.company_id,
                     'name': company.name,

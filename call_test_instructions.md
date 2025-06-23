@@ -2,6 +2,10 @@
 
 ## ✅ System Status: FULLY FUNCTIONAL
 
+**LATEST FIXES (Dec 2024)**:
+1. ✅ Fixed company selection bug - Added missing `name` attributes to form fields
+2. ✅ Updated Twilio credentials - Call functionality now working (Call SID: CA4500cf92acbebf0bf729d5acfc12e45c)
+
 The call functionality has been tested and verified working at all levels:
 
 ### Backend API Status

@@ -157,7 +157,7 @@
                 <form id="call-form">
                     <div class="form-group">
                         <label for="company-select">Company</label>
-                        <select id="company-select" class="form-control" required>
+                        <select id="company-select" name="company-select" class="form-control" required>
                             <option value="">Select Company</option>
                             {% if companies %}
                                 {% for company_id, company in companies.items() %}
@@ -168,11 +168,11 @@
                     </div>
                     <div class="form-group">
                         <label for="phone-number">Phone Number</label>
-                        <input type="tel" id="phone-number" class="form-control" placeholder="+91XXXXXXXXXX" required>
+                        <input type="tel" id="phone-number" name="phone-number" class="form-control" placeholder="+91XXXXXXXXXX" required>
                     </div>
                     <div class="form-group">
                         <label for="call-priority">Priority</label>
-                        <select id="call-priority" class="form-control">
+                        <select id="call-priority" name="call-priority" class="form-control">
                             <option value="normal">Normal</option>
                             <option value="urgent">Urgent</option>
                             <option value="critical">Critical</option>
@@ -203,11 +203,11 @@
                 <form id="whatsapp-form">
                     <div class="form-group">
                         <label for="whatsapp-phone">Phone Number</label>
-                        <input type="tel" id="whatsapp-phone" class="form-control" placeholder="+91XXXXXXXXXX" required>
+                        <input type="tel" id="whatsapp-phone" name="whatsapp-phone" class="form-control" placeholder="+91XXXXXXXXXX" required>
                     </div>
                     <div class="form-group">
                         <label for="whatsapp-message">Message</label>
-                        <textarea id="whatsapp-message" class="form-control" rows="4" placeholder="Enter custom message or leave blank for AI-generated message"></textarea>
+                        <textarea id="whatsapp-message" name="whatsapp-message" class="form-control" rows="4" placeholder="Enter custom message or leave blank for AI-generated message"></textarea>
                     </div>
                 </form>
             </div>
