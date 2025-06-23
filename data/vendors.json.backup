@@ -1,0 +1,36 @@
+{
+  "lab_supply_pro": {
+    "vendor_id": "lab_supply_pro",
+    "name": "Lab Supply Pro",
+    "phone": "+918800001111",
+    "email": "sales@labsupplypro.com",
+    "specialties": [
+      "Laboratory Consumables",
+      "Glassware"
+    ],
+    "rating": 4.5,
+    "response_time": "24 hours",
+    "price_competitiveness": "competitive",
+    "last_contact": null,
+    "total_orders": 45,
+    "successful_deliveries": 42,
+    "created_at": "2025-06-23T12:07:54.477453"
+  },
+  "chemical_solutions": {
+    "vendor_id": "chemical_solutions",
+    "name": "Chemical Solutions Ltd",
+    "phone": "+918800003333",
+    "email": "procurement@chemsolutions.co.in",
+    "specialties": [
+      "Chemicals",
+      "Reagents"
+    ],
+    "rating": 4.7,
+    "response_time": "12 hours",
+    "price_competitiveness": "competitive",
+    "last_contact": null,
+    "total_orders": 38,
+    "successful_deliveries": 37,
+    "created_at": "2025-06-23T12:07:54.477453"
+  }
+}

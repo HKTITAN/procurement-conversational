@@ -1,388 +1,742 @@
+#!/usr/bin/env python3
+"""
+Multi-Company Procurement Platform - Main Entry Point
+Orchestrates all components with proper error handling and startup sequence
+"""
+
 import os
-import csv
-import json
-import logging
-from datetime import datetime
-from typing import List, Dict, Any
-import asyncio
-from twilio.rest import Client
-from twilio.twiml.voice_response import VoiceResponse
-from flask import Flask, request, jsonify
-import threading
+import sys
 import time
-import pandas as pd
-from config import config
+import threading
+import subprocess
+import signal
+from datetime import datetime
 
-# Configure logging
-logging.basicConfig(
-    level=getattr(logging, config.LOG_LEVEL), 
-    format=config.LOG_FORMAT
-)
-logger = logging.getLogger(__name__)
+# Set up environment variables for Twilio (from working system)
+if not os.getenv('TWILIO_ACCOUNT_SID'):
+    os.environ['TWILIO_ACCOUNT_SID'] = 'AC820daae89092e30fee3487e80162d2e2'
+    
+if not os.getenv('TWILIO_AUTH_TOKEN'):
+    os.environ['TWILIO_AUTH_TOKEN'] = '7ef5e5b670b37b3b15faf333eef7f314'
+    
+if not os.getenv('TWILIO_FROM_NUMBER'):
+    os.environ['TWILIO_FROM_NUMBER'] = '+14323484517'
+    
+if not os.getenv('TWILIO_WHATSAPP_FROM'):
+    os.environ['TWILIO_WHATSAPP_FROM'] = 'whatsapp:+14155238886'
 
-class ProcurementAutomationSystem:
+# Set up Gemini API key if not already set
+if not os.getenv('GEMINI_API_KEY'):
+    os.environ['GEMINI_API_KEY'] = 'AIzaSyBCXNuaO9VlL5z1phh4mWGEVnnmRFk9TNg'
+
+# Import our modules
+from database import db
+from ai_services import ai_service
+from communication import comm_service
+from procurement import procurement_engine
+from web_server import web_server
+
+class ProcurementPlatform:
+    """Main platform orchestrator"""
+    
     def __init__(self):
-        # Twilio Configuration from config
-        self.account_sid = config.TWILIO_ACCOUNT_SID
-        self.auth_token = config.TWILIO_AUTH_TOKEN
-        self.phone_number = config.TWILIO_PHONE_NUMBER
-        self.api_key_sid = config.TWILIO_API_KEY_SID
+        self.ngrok_process = None
+        self.ngrok_url = None
+        self.running = False
+        self.startup_errors = []
         
-        # Initialize Twilio client
-        self.twilio_client = Client(self.account_sid, self.auth_token)
-        
-        # Test vendor details from config
-        self.test_vendor = config.TEST_VENDOR
-        
-        # Client details from config
-        self.client_name = config.CLIENT_NAME
-        
-        # File paths from config
-        self.inventory_file = config.INVENTORY_FILE
-        self.requirements_file = config.REQUIREMENTS_FILE
-        self.quotes_file = config.QUOTES_FILE
-        self.final_orders_file = config.FINAL_ORDERS_FILE
-        
-        # Webhook server
-        self.app = Flask(__name__)
-        self.setup_webhook_routes()
-        
-        # Current conversation state
-        self.conversation_state = {}
-        
-    def setup_webhook_routes(self):
-        """Setup Flask routes for webhook handling"""
-        
-        @self.app.route('/webhook/voice', methods=['POST'])
-        def handle_voice_webhook():
-            """Handle incoming voice webhook from ConversationRelay"""
-            data = request.get_json()
-            logger.info(f"Voice webhook received: {data}")
-            
-            # Process the conversation data
-            self.process_conversation_update(data)
-            
-            return jsonify({"status": "success"})
-        
-        @self.app.route('/webhook/quote', methods=['POST'])
-        def handle_quote_webhook():
-            """Handle quote updates during conversation"""
-            data = request.get_json()
-            logger.info(f"Quote webhook received: {data}")
-            
-            # Log quote to CSV
-            self.log_quote_to_csv(data)
-            
-            return jsonify({"status": "quote_logged"})
-        
-        @self.app.route('/health', methods=['GET'])
-        def health_check():
-            return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
+        # Setup signal handlers for graceful shutdown
+        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.signal(signal.SIGTERM, self.signal_handler)
     
-    def read_inventory(self) -> List[Dict]:
-        """Read inventory.csv and identify low/out-of-stock items"""
+    def print_banner(self):
+        """Print startup banner"""
+        banner = """
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║    🏭 MULTI-COMPANY PROCUREMENT PLATFORM                     ║
+║                                                              ║
+║    AI-Powered Inventory Management                           ║
+║    📞 Voice + WhatsApp Communication                         ║
+║    📊 Real-Time Analytics & Insights                         ║
+║    🤖 Intelligent Vendor Negotiations                        ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+        """
+        print(banner)
+        print(f"🕐 Startup Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print("=" * 70)
+    
+    def validate_environment(self):
+        """Validate environment and dependencies"""
+        print("🔍 Validating environment...")
+        
+        # Check Python version
+        if sys.version_info < (3, 8):
+            self.startup_errors.append("Python 3.8 or higher required")
+        
+        # Check required modules (only essential ones)
+        required_modules = [
+            'flask', 'requests'
+        ]
+        
+        optional_modules = [
+            'google.generativeai', 'twilio', 'flask_socketio'
+        ]
+        
+        missing_modules = []
+        for module in required_modules:
+            try:
+                __import__(module.replace('.', '_') if '.' in module else module)
+            except ImportError:
+                missing_modules.append(module)
+        
+        if missing_modules:
+            self.startup_errors.append(f"Missing essential modules: {', '.join(missing_modules)}")
+        
+        # Check optional modules and warn
+        missing_optional = []
+        for module in optional_modules:
+            try:
+                __import__(module.replace('.', '_') if '.' in module else module)
+            except ImportError:
+                missing_optional.append(module)
+        
+        if missing_optional:
+            print(f"⚠️  Optional modules missing: {', '.join(missing_optional)}")
+            print("   Some features will be limited. Install with: pip install -r requirements.txt")
+        
+        # Check environment variables
+        gemini_key = os.getenv('GEMINI_API_KEY')
+        if not gemini_key:
+            print("⚠️  GEMINI_API_KEY not set - AI features will use fallbacks")
+        
+        if self.startup_errors:
+            print("❌ Environment validation failed:")
+            for error in self.startup_errors:
+                print(f"   • {error}")
+            return False
+        
+        print("✅ Environment validation passed")
+        return True
+    
+    def initialize_components(self):
+        """Initialize all platform components"""
+        print("🔧 Initializing platform components...")
+        
         try:
-            df = pd.read_csv(self.inventory_file)
-            low_stock_items = []
+            # Initialize database first
+            print("📊 Initializing database...")
+            # Database is auto-initialized on import
+            companies = db.get_all_companies()
+            vendors = db.get_all_vendors()
+            print(f"   ✅ Database ready: {len(companies)} companies, {len(vendors)} vendors")
             
-            for _, row in df.iterrows():
-                if row['current_stock'] <= row['minimum_threshold']:
-                    low_stock_items.append({
-                        'item_name': row['item_name'],
-                        'current_stock': row['current_stock'],
-                        'minimum_threshold': row['minimum_threshold'],
-                        'required_quantity': row['minimum_threshold'] - row['current_stock'] + row.get('buffer_stock', 10),
-                        'category': row.get('category', 'General'),
-                        'specifications': row.get('specifications', '')
-                    })
+            # Initialize AI services
+            print("🤖 Initializing AI services...")
+            ai_status = ai_service.get_health_status()
+            if ai_status['model_available']:
+                print("   ✅ Gemini AI ready for dynamic content generation")
+            else:
+                print("   ⚠️  AI in fallback mode - using predefined responses")
             
-            logger.info(f"Found {len(low_stock_items)} items requiring procurement")
-            return low_stock_items
+            # Initialize communication services
+            print("📞 Initializing communication services...")
+            comm_stats = comm_service.get_statistics()
+            if comm_stats['credentials_valid']:
+                print("   ✅ Twilio credentials validated - Voice & WhatsApp ready")
+            else:
+                print("   ⚠️  Twilio credentials invalid - Communication features disabled")
             
-        except FileNotFoundError:
-            logger.error(f"Inventory file {self.inventory_file} not found")
-            return []
+            # Initialize procurement engine
+            print("🛒 Initializing procurement engine...")
+            # Procurement engine is auto-initialized on import
+            print("   ✅ Procurement analysis engine ready")
+            
+            # Initialize web server
+            print("🌐 Initializing web server...")
+            print("   ✅ Flask web server ready")
+            
+            return True
+            
         except Exception as e:
-            logger.error(f"Error reading inventory: {str(e)}")
-            return []
+            print(f"❌ Component initialization failed: {e}")
+            return False
     
-    def generate_requirements_csv(self, low_stock_items: List[Dict]):
-        """Generate requirements.csv from low stock items"""
+    def start_ngrok(self):
+        """Start ngrok tunnel for webhooks"""
+        print("🔗 Starting ngrok tunnel...")
+        
         try:
-            with open(self.requirements_file, 'w', newline='', encoding='utf-8') as csvfile:
-                fieldnames = ['item_name', 'required_quantity', 'category', 'specifications', 'priority']
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writeheader()
-                
-                for item in low_stock_items:
-                    writer.writerow({
-                        'item_name': item['item_name'],
-                        'required_quantity': item['required_quantity'],
-                        'category': item['category'],
-                        'specifications': item['specifications'],
-                        'priority': 'High' if item['current_stock'] == 0 else 'Medium'
-                    })
+            # Check if ngrok is available
+            result = subprocess.run(['ngrok', 'version'], 
+                                  capture_output=True, text=True, timeout=5)
             
-            logger.info(f"Generated requirements.csv with {len(low_stock_items)} items")
+            if result.returncode != 0:
+                print("⚠️  ngrok not found - webhook features will be limited")
+                return False
             
-        except Exception as e:
-            logger.error(f"Error generating requirements CSV: {str(e)}")
-    
-    def create_conversation_relay_call(self, vendor_phone: str, requirements: List[Dict]) -> str:
-        """Create a ConversationRelay call to vendor"""
-        try:
-            # Prepare the conversation context
-            conversation_context = {
-                "client_name": self.client_name,
-                "vendor_name": self.test_vendor["name"],
-                "items_to_quote": requirements,
-                "conversation_goal": "Get quotes for required items",
-                "webhook_url": "https://543a-2401-4900-1c30-31b1-c11a-e61b-78b3-ce01.ngrok-free.app/webhook/quote"  # Replace with actual webhook URL
-            }
-            
-            # AI prompt for natural conversation
-            ai_instructions = f"""
-            You are an AI procurement assistant for {self.client_name}. You're calling {self.test_vendor['name']} to get quotes for items we need to order.
-            
-            Be natural and conversational. Start by introducing yourself and explaining the purpose of your call.
-            Ask about each item one by one, including quantity needed and any specifications.
-            When vendor provides a price, confirm it by repeating back: "So that's $X.XX per unit for [quantity] [item], correct?"
-            After confirmation, immediately send the quote data to the webhook.
-            
-            Items to quote:
-            {json.dumps(requirements, indent=2)}
-            
-            Keep the conversation flowing naturally - don't just read a list. Ask follow-up questions about availability, delivery times, and bulk discounts when appropriate.
-            """
-            
-            # Create ConversationRelay call
-            call = self.twilio_client.calls.create(
-                url='https://543a-2401-4900-1c30-31b1-c11a-e61b-78b3-ce01.ngrok-free.app/webhook/voice',  # Replace with actual webhook URL
-                to=vendor_phone,
-                from_=self.phone_number,
-                method='POST'
+            # Start ngrok tunnel
+            self.ngrok_process = subprocess.Popen(
+                ['ngrok', 'http', '5000', '--log=stdout'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
             )
             
-            logger.info(f"ConversationRelay call initiated: {call.sid}")
-            return call.sid
+            # Wait for ngrok to start
+            print("   ⏳ Waiting for ngrok tunnel...")
+            time.sleep(3)
             
+            # Get ngrok URL
+            try:
+                import requests
+                response = requests.get('http://localhost:4040/api/tunnels', timeout=5)
+                if response.status_code == 200:
+                    tunnels = response.json()['tunnels']
+                    if tunnels:
+                        self.ngrok_url = tunnels[0]['public_url']
+                        web_server.set_ngrok_url(self.ngrok_url)
+                        print(f"   ✅ Ngrok tunnel active: {self.ngrok_url}")
+                        return True
+            except:
+                pass
+            
+            print("   ⚠️  Could not get ngrok URL automatically")
+            manual_url = input("Enter ngrok URL manually (or press Enter to skip): ").strip()
+            
+            if manual_url:
+                self.ngrok_url = manual_url
+                web_server.set_ngrok_url(manual_url)
+                print(f"   ✅ Using manual ngrok URL: {manual_url}")
+                return True
+            else:
+                print("   ⚠️  Continuing without ngrok - webhook features limited")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            print("   ⚠️  ngrok startup timeout - continuing without webhooks")
+            return False
         except Exception as e:
-            logger.error(f"Error creating ConversationRelay call: {str(e)}")
-            return None
+            print(f"   ⚠️  ngrok error: {e} - continuing without webhooks")
+            return False
     
-    def process_conversation_update(self, webhook_data: Dict):
-        """Process conversation updates from ConversationRelay"""
-        try:
-            call_sid = webhook_data.get('CallSid')
-            conversation_text = webhook_data.get('SpeechResult', '')
-            
-            # Store conversation state
-            if call_sid not in self.conversation_state:
-                self.conversation_state[call_sid] = {
-                    'start_time': datetime.now(),
-                    'messages': [],
-                    'quotes_received': []
-                }
-            
-            self.conversation_state[call_sid]['messages'].append({
-                'timestamp': datetime.now(),
-                'text': conversation_text,
-                'type': 'speech_result'
-            })
-            
-            # Parse for price information
-            self.extract_quotes_from_conversation(call_sid, conversation_text)
-            
-        except Exception as e:
-            logger.error(f"Error processing conversation update: {str(e)}")
-    
-    def extract_quotes_from_conversation(self, call_sid: str, text: str):
-        """Extract quote information from conversation text"""
-        import re
+    def start_web_server(self):
+        """Start the web server"""
+        print("🚀 Starting web server...")
         
-        # Simple regex patterns for price extraction
-        price_patterns = [
-            r'\$(\d+\.?\d*)',
-            r'(\d+\.?\d*)\s*dollars?',
-            r'(\d+\.?\d*)\s*per\s+unit',
-            r'(\d+\.?\d*)\s*each'
+        try:
+            # Start web server in background thread
+            server_thread = threading.Thread(
+                target=web_server.run,
+                kwargs={'debug': False},
+                daemon=True
+            )
+            server_thread.start()
+            
+            # Wait for server to start
+            time.sleep(2)
+            
+            local_url = "http://localhost:5000"
+            print(f"   ✅ Web server running on {local_url}")
+            if self.ngrok_url:
+                print(f"   🌐 Public URL: {self.ngrok_url}")
+            
+            # Auto-open local dashboard in browser
+            try:
+                import webbrowser
+                
+                def open_browser():
+                    time.sleep(1)  # Wait a bit more for server to be ready
+                    try:
+                        webbrowser.open(local_url)
+                        print(f"   🌐 Browser opened to: {local_url}")
+                    except Exception as e:
+                        print(f"   💡 Please manually open: {local_url}")
+                
+                # Start browser opening in background
+                browser_thread = threading.Thread(target=open_browser, daemon=True)
+                browser_thread.start()
+                
+            except ImportError:
+                print(f"   💡 Please manually open: {local_url}")
+            except Exception as e:
+                print(f"   💡 Could not auto-open browser: {e}")
+                print(f"   🌐 Please manually open: {local_url}")
+            
+            return True
+            
+        except Exception as e:
+            print(f"   ❌ Failed to start web server: {e}")
+            return False
+    
+    def show_system_status(self):
+        """Show comprehensive system status"""
+        print("\n" + "=" * 70)
+        print("📊 SYSTEM STATUS SUMMARY")
+        print("=" * 70)
+        
+        # Component status
+        components = {
+            "Database": "✅ Ready",
+            "AI Services": "✅ Ready" if ai_service.is_available() else "⚠️  Fallback Mode",
+            "Communication": "✅ Ready" if comm_service.credentials_valid else "❌ Invalid Credentials",
+            "Procurement Engine": "✅ Ready",
+            "Web Server": "✅ Running",
+            "Ngrok Tunnel": "✅ Active" if self.ngrok_url else "❌ Not Available"
+        }
+        
+        for component, status in components.items():
+            print(f"{component:20} {status}")
+        
+        print("\n📋 PLATFORM CAPABILITIES:")
+        capabilities = [
+            "✅ Multi-company inventory management",
+            "✅ AI-powered vendor conversations",
+            "✅ Real-time procurement analysis",
+            "✅ Web dashboard with analytics",
+            "✅ Voice call automation" if comm_service.credentials_valid else "❌ Voice calls (credentials needed)",
+            "✅ WhatsApp integration" if comm_service.credentials_valid else "❌ WhatsApp (credentials needed)",
+            "✅ Webhook endpoints" if self.ngrok_url else "❌ Webhooks (ngrok needed)"
         ]
         
-        item_patterns = [
-            r'for\s+(\w+(?:\s+\w+)*)',
-            r'(\w+(?:\s+\w+)*)\s+(?:costs?|is|will be)'
-        ]
+        for capability in capabilities:
+            print(f"  {capability}")
         
-        for price_pattern in price_patterns:
-            price_matches = re.findall(price_pattern, text.lower())
-            if price_matches:
-                for item_pattern in item_patterns:
-                    item_matches = re.findall(item_pattern, text.lower())
-                    if item_matches:
-                        # Found potential quote
-                        quote_data = {
-                            'call_sid': call_sid,
-                            'item_name': item_matches[0],
-                            'price': float(price_matches[0]),
-                            'timestamp': datetime.now().isoformat(),
-                            'raw_text': text
-                        }
-                        self.log_quote_to_csv(quote_data)
-                        break
-    
-    def log_quote_to_csv(self, quote_data: Dict):
-        """Log quote data to quotes.csv"""
+        print(f"\n🌐 ACCESS POINTS:")
+        print(f"  🏠 Local Dashboard:    http://localhost:5000")
+        print(f"  🏠 Local API Health:   http://localhost:5000/health")
+        if self.ngrok_url:
+            print(f"  🌍 Public Dashboard:   {self.ngrok_url}")
+            print(f"  🌍 Public Webhooks:    {self.ngrok_url}/webhook/*")
+        else:
+            print(f"  🌍 Public Access:      Not available (ngrok not running)")
+        
+        # Quick statistics
+        companies = db.get_all_companies()
+        vendors = db.get_all_vendors()
+        
+        print(f"\n📈 CURRENT DATA:")
+        print(f"  Companies:     {len(companies)}")
+        print(f"  Vendors:       {len(vendors)}")
+        print(f"  Conversations: {len(db.get_conversations(limit=50))}")
+        
+        # Procurement alerts
         try:
-            file_exists = os.path.isfile(self.quotes_file)
+            analysis = procurement_engine.analyze_procurement_requirements(companies)
+            critical_items = analysis['summary']['critical_items']
+            urgent_items = analysis['summary']['urgent_items']
             
-            with open(self.quotes_file, 'a', newline='', encoding='utf-8') as csvfile:
-                fieldnames = ['timestamp', 'vendor_name', 'item_name', 'price', 'quantity', 'call_sid', 'raw_text']
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            if critical_items > 0 or urgent_items > 0:
+                print(f"\n⚠️  PROCUREMENT ALERTS:")
+                if critical_items > 0:
+                    print(f"  🚨 {critical_items} critical items need immediate attention")
+                if urgent_items > 0:
+                    print(f"  ⚠️  {urgent_items} urgent items require procurement")
+            else:
+                print(f"\n✅ No urgent procurement requirements")
                 
-                if not file_exists:
-                    writer.writeheader()
-                
-                writer.writerow({
-                    'timestamp': quote_data.get('timestamp', datetime.now().isoformat()),
-                    'vendor_name': self.test_vendor['name'],
-                    'item_name': quote_data.get('item_name', ''),
-                    'price': quote_data.get('price', 0),
-                    'quantity': quote_data.get('quantity', 1),
-                    'call_sid': quote_data.get('call_sid', ''),
-                    'raw_text': quote_data.get('raw_text', '')
-                })
+        except Exception as e:
+            print(f"\n⚠️  Could not analyze procurement status: {e}")
+    
+    def show_interactive_menu(self):
+        """Show interactive management menu"""
+        while self.running:
+            print("\n" + "=" * 70)
+            print("🎛️  PROCUREMENT PLATFORM CONTROL CENTER")
+            print("=" * 70)
+            print("1.  📊 System Status & Health Check")
+            print("2.  🏢 View Companies & Inventory")
+            print("3.  🤝 View Vendors & Performance")
+            print("4.  🛒 Run Procurement Analysis")
+            print("5.  📞 Test Voice Call System")
+            print("6.  📱 Test WhatsApp Integration")
+            print("7.  💬 View Recent Conversations")
+            print("8.  📈 View Analytics Dashboard")
+            print("9.  🔧 System Configuration")
+            print("10. 🌐 Open Web Dashboard")
+            print("11. 📋 Export Data")
+            print("12. 🔄 Restart Components")
+            print("13. ❓ Help & Documentation")
+            print("14. 🛑 Shutdown Platform")
             
-            logger.info(f"Quote logged: {quote_data.get('item_name')} - ${quote_data.get('price')}")
+            try:
+                choice = input("\nSelect option (1-14): ").strip()
+                
+                if choice == "1":
+                    self.show_system_status()
+                
+                elif choice == "2":
+                    self.show_companies_info()
+                
+                elif choice == "3":
+                    self.show_vendors_info()
+                
+                elif choice == "4":
+                    self.run_procurement_analysis()
+                
+                elif choice == "5":
+                    self.test_voice_calls()
+                
+                elif choice == "6":
+                    self.test_whatsapp()
+                
+                elif choice == "7":
+                    self.show_conversations()
+                
+                elif choice == "8":
+                    self.open_web_dashboard()
+                
+                elif choice == "9":
+                    self.show_configuration()
+                
+                elif choice == "10":
+                    self.open_web_dashboard()
+                
+                elif choice == "11":
+                    self.export_data()
+                
+                elif choice == "12":
+                    self.restart_components()
+                
+                elif choice == "13":
+                    self.show_help()
+                
+                elif choice == "14":
+                    self.shutdown()
+                    break
+                
+                else:
+                    print("❌ Invalid choice. Please select 1-14.")
+                
+                input("\nPress Enter to continue...")
+                
+            except KeyboardInterrupt:
+                print("\n\n🛑 Shutdown requested...")
+                self.shutdown()
+                break
+            except Exception as e:
+                print(f"❌ Menu error: {e}")
+    
+    def show_companies_info(self):
+        """Show companies information"""
+        print("\n🏢 COMPANIES OVERVIEW")
+        print("-" * 50)
+        
+        companies = db.get_all_companies()
+        for company in companies.values():
+            low_stock = company.get_low_stock_items()
+            print(f"\n📊 {company.name}")
+            print(f"   Industry: {company.industry}")
+            print(f"   Contact: {company.contact_person}")
+            print(f"   Budget: ₹{company.budget_monthly:,.0f}/month")
+            print(f"   Inventory Items: {len(company.inventory) if company.inventory else 0}")
+            print(f"   Low Stock Items: {len(low_stock)}")
+            
+            if low_stock:
+                print("   ⚠️  Items needing attention:")
+                for item in low_stock[:3]:
+                    print(f"     • {item.name}: {item.current_stock}/{item.minimum_required}")
+    
+    def show_vendors_info(self):
+        """Show vendors information"""
+        print("\n🤝 VENDORS OVERVIEW")
+        print("-" * 50)
+        
+        vendors = db.get_all_vendors()
+        for vendor in vendors.values():
+            print(f"\n📞 {vendor.name}")
+            print(f"   Rating: {'⭐' * int(vendor.rating)} {vendor.rating}/5.0")
+            print(f"   Phone: {vendor.phone}")
+            print(f"   Specialties: {', '.join(vendor.specialties)}")
+            print(f"   Response Time: {vendor.response_time}")
+            print(f"   Success Rate: {vendor.get_success_rate():.1f}%")
+    
+    def run_procurement_analysis(self):
+        """Run procurement analysis"""
+        print("\n🛒 RUNNING PROCUREMENT ANALYSIS")
+        print("-" * 50)
+        
+        try:
+            companies = db.get_all_companies()
+            analysis = procurement_engine.analyze_procurement_requirements(companies)
+            
+            print(f"📊 Analysis Results:")
+            print(f"   Companies analyzed: {analysis['summary']['total_companies']}")
+            print(f"   Companies needing procurement: {analysis['summary']['companies_needing_procurement']}")
+            print(f"   Critical items: {analysis['summary']['critical_items']}")
+            print(f"   Urgent items: {analysis['summary']['urgent_items']}")
+            print(f"   Total estimated cost: ₹{analysis['summary']['total_estimated_cost']:,.2f}")
+            
+            if analysis['recommendations']:
+                print(f"\n💡 Recommendations:")
+                for rec in analysis['recommendations']:
+                    print(f"   • {rec}")
             
         except Exception as e:
-            logger.error(f"Error logging quote: {str(e)}")
+            print(f"❌ Analysis failed: {e}")
     
-    def compare_quotes_and_generate_orders(self):
-        """Compare quotes and generate final_orders.csv with best prices"""
+    def test_voice_calls(self):
+        """Test voice call system"""
+        print("\n📞 VOICE CALL SYSTEM TEST")
+        print("-" * 50)
+        
+        if not comm_service.credentials_valid:
+            print("❌ Twilio credentials invalid - cannot test calls")
+            return
+        
+        phone = input("Enter phone number to test (+91xxxxxxxxxx): ").strip()
+        if not phone:
+            print("❌ No phone number provided")
+            return
+        
+        companies = db.get_all_companies()
+        if not companies:
+            print("❌ No companies available")
+            return
+        
+        company = next(iter(companies.values()))
+        
+        print(f"📞 Testing call to {phone}...")
+        success, result = comm_service.make_voice_call(phone, company, "http://localhost:5000")
+        
+        if success:
+            print(f"✅ Call initiated successfully! Call SID: {result}")
+        else:
+            print(f"❌ Call failed: {result}")
+    
+    def test_whatsapp(self):
+        """Test WhatsApp integration"""
+        print("\n📱 WHATSAPP INTEGRATION TEST")
+        print("-" * 50)
+        
+        if not comm_service.credentials_valid:
+            print("❌ Twilio credentials invalid - cannot test WhatsApp")
+            return
+        
+        phone = input("Enter phone number for WhatsApp (+91xxxxxxxxxx): ").strip()
+        if not phone:
+            print("❌ No phone number provided")
+            return
+        
+        companies = db.get_all_companies()
+        company = next(iter(companies.values())) if companies else None
+        
+        message = ai_service.generate_whatsapp_message(company) if company else "Test message from Procurement Platform"
+        
+        print(f"📱 Sending WhatsApp to {phone}...")
+        print(f"Message: {message}")
+        
+        success, result = comm_service.send_whatsapp_message(phone, message, company)
+        
+        if success:
+            print(f"✅ WhatsApp sent successfully! Message SID: {result}")
+        else:
+            print(f"❌ WhatsApp failed: {result}")
+    
+    def show_conversations(self):
+        """Show recent conversations"""
+        print("\n💬 RECENT CONVERSATIONS")
+        print("-" * 50)
+        
+        conversations = db.get_conversations(limit=10)
+        
+        if not conversations:
+            print("No conversations found.")
+            return
+        
+        for conv in conversations[-5:]:  # Show last 5
+            print(f"\n🕐 {conv.timestamp}")
+            print(f"Type: {conv.type.upper()}")
+            if conv.vendor_number:
+                print(f"Vendor: {conv.vendor_number}")
+            print(f"Message: {conv.vendor_message[:100]}...")
+            print(f"Response: {conv.ai_response[:100]}...")
+    
+    def open_web_dashboard(self):
+        """Open web dashboard in browser"""
         try:
-            df_quotes = pd.read_csv(self.quotes_file)
-            df_requirements = pd.read_csv(self.requirements_file)
+            import webbrowser
+            local_url = "http://localhost:5000"
             
-            best_quotes = []
+            # Always prefer local access for direct user interaction
+            print(f"🌐 Opening local dashboard: {local_url}")
+            webbrowser.open(local_url)
             
-            for _, req in df_requirements.iterrows():
-                item_name = req['item_name']
-                required_qty = req['required_quantity']
+            if self.ngrok_url:
+                print(f"💡 Public URL also available: {self.ngrok_url}")
                 
-                # Find all quotes for this item
-                item_quotes = df_quotes[df_quotes['item_name'].str.contains(item_name, case=False, na=False)]
-                
-                if not item_quotes.empty:
-                    # Get the best (lowest) price
-                    best_quote = item_quotes.loc[item_quotes['price'].idxmin()]
-                    
-                    best_quotes.append({
-                        'item_name': item_name,
-                        'vendor_name': best_quote['vendor_name'],
-                        'quantity': required_qty,
-                        'unit_price': best_quote['price'],
-                        'total_price': best_quote['price'] * required_qty,
-                        'order_date': datetime.now().isoformat(),
-                        'status': 'Ready to Order'
-                    })
-            
-            # Write final orders CSV
-            with open(self.final_orders_file, 'w', newline='', encoding='utf-8') as csvfile:
-                fieldnames = ['item_name', 'vendor_name', 'quantity', 'unit_price', 'total_price', 'order_date', 'status']
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writeheader()
-                writer.writerows(best_quotes)
-            
-            logger.info(f"Generated final orders for {len(best_quotes)} items")
-            return best_quotes
-            
         except Exception as e:
-            logger.error(f"Error comparing quotes: {str(e)}")
-            return []
+            print(f"❌ Could not open browser: {e}")
+            print(f"🌐 Manual access:")
+            print(f"   Local:  http://localhost:5000")
+            if self.ngrok_url:
+                print(f"   Public: {self.ngrok_url}")
     
-    def start_webhook_server(self):
-        """Start the webhook server in a separate thread"""
-        def run_server():
-            self.app.run(host=config.WEBHOOK_HOST, port=config.WEBHOOK_PORT, debug=False)
+    def show_configuration(self):
+        """Show system configuration"""
+        print("\n🔧 SYSTEM CONFIGURATION")
+        print("-" * 50)
         
-        server_thread = threading.Thread(target=run_server)
-        server_thread.daemon = True
-        server_thread.start()
-        logger.info(f"Webhook server started on {config.WEBHOOK_HOST}:{config.WEBHOOK_PORT}")
+        print(f"Python Version: {sys.version}")
+        print(f"Platform: {sys.platform}")
+        print(f"Working Directory: {os.getcwd()}")
+        
+        print(f"\nEnvironment Variables:")
+        env_vars = ['GEMINI_API_KEY', 'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN']
+        for var in env_vars:
+            value = os.getenv(var)
+            if value:
+                print(f"  {var}: {'*' * 8}...{value[-4:] if len(value) > 8 else '***'}")
+            else:
+                print(f"  {var}: Not set")
     
-    def run_procurement_workflow(self):
-        """Execute the complete procurement workflow"""
-        logger.info("Starting Likwid.AI Procurement Automation System")
-        logger.info(f"Client: {self.client_name}")
-        logger.info(f"Test Vendor: {self.test_vendor['name']} ({self.test_vendor['phone']})")
+    def export_data(self):
+        """Export platform data"""
+        print("\n📋 DATA EXPORT")
+        print("-" * 50)
         
-        # Step 1: Start webhook server
-        self.start_webhook_server()
-        time.sleep(2)  # Give server time to start
+        try:
+            filename = db.export_to_csv("all")
+            print(f"✅ Data exported to: {filename}")
+        except Exception as e:
+            print(f"❌ Export failed: {e}")
+    
+    def restart_components(self):
+        """Restart platform components"""
+        print("\n🔄 RESTARTING COMPONENTS")
+        print("-" * 50)
+        print("⚠️  This feature is not implemented yet.")
+        print("To restart, please stop the platform and run main.py again.")
+    
+    def show_help(self):
+        """Show help and documentation"""
+        help_text = """
+❓ PROCUREMENT PLATFORM HELP
+
+🏗️  ARCHITECTURE:
+• models.py - Data structures and models
+• database.py - Data persistence and management
+• ai_services.py - Gemini AI integration with fallbacks
+• communication.py - Twilio voice & WhatsApp handling
+• procurement.py - Business logic for procurement analysis
+• web_server.py - Flask web application
+• main.py - Platform orchestrator
+
+📞 COMMUNICATION FEATURES:
+• Voice calls with speech recognition
+• WhatsApp integration with auto-fallback
+• Real-time conversation tracking
+• AI-powered responses with fallbacks
+
+🛒 PROCUREMENT FEATURES:
+• Multi-company inventory management
+• Automated shortage detection
+• Vendor recommendation engine
+• Price comparison and negotiation
+
+🌐 WEB DASHBOARD:
+• Real-time analytics and insights
+• Interactive company and vendor management
+• Live conversation monitoring
+• Procurement analysis tools
+
+🔧 TROUBLESHOOTING:
+• Check system status (#1 in menu)
+• Verify Twilio credentials for communication
+• Ensure ngrok is running for webhooks
+• Check AI service status for dynamic responses
+
+📚 For detailed documentation, visit the project repository.
+        """
+        print(help_text)
+    
+    def signal_handler(self, signum, frame):
+        """Handle shutdown signals"""
+        print(f"\n🛑 Received signal {signum}, shutting down...")
+        self.shutdown()
+        sys.exit(0)
+    
+    def shutdown(self):
+        """Graceful shutdown"""
+        print("\n🛑 Shutting down Procurement Platform...")
         
-        # Step 2: Read inventory and identify low stock items
-        logger.info("Step 1: Reading inventory and identifying low stock items...")
-        low_stock_items = self.read_inventory()
+        self.running = False
         
-        if not low_stock_items:
-            logger.info("No items require procurement at this time")
-            return
+        # Stop ngrok
+        if self.ngrok_process:
+            print("   🔗 Stopping ngrok tunnel...")
+            self.ngrok_process.terminate()
+            try:
+                self.ngrok_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.ngrok_process.kill()
         
-        # Step 3: Generate requirements CSV
-        logger.info("Step 2: Generating requirements.csv...")
-        self.generate_requirements_csv(low_stock_items)
+        # Save any pending data
+        try:
+            print("   💾 Saving data...")
+            db.save_all_data()
+        except Exception as e:
+            print(f"   ⚠️  Error saving data: {e}")
         
-        # Step 4: Initiate ConversationRelay call with vendor
-        logger.info("Step 3: Initiating voice conversation with vendor...")
-        call_sid = self.create_conversation_relay_call(
-            self.test_vendor['phone'], 
-            low_stock_items
-        )
+        # Cleanup communication
+        try:
+            print("   📞 Cleaning up communication...")
+            comm_service.cleanup_old_conversations()
+        except Exception as e:
+            print(f"   ⚠️  Error cleaning up: {e}")
         
-        if call_sid:
-            logger.info(f"Call initiated successfully: {call_sid}")
-            logger.info("Waiting for conversation to complete and quotes to be collected...")
-            
-            # Wait for conversation to complete (in real implementation, this would be event-driven)
-            time.sleep(60)  # Placeholder wait time
-        else:
-            logger.error("Failed to initiate call")
-            return
+        print("✅ Platform shutdown complete")
+    
+    def run(self):
+        """Main platform run method"""
+        self.print_banner()
         
-        # Step 5: Compare quotes and generate final orders
-        logger.info("Step 4: Comparing quotes and generating final orders...")
-        final_orders = self.compare_quotes_and_generate_orders()
+        # Validate environment
+        if not self.validate_environment():
+            print("❌ Environment validation failed. Please fix errors and restart.")
+            return False
         
-        if final_orders:
-            total_value = sum(order['total_price'] for order in final_orders)
-            logger.info(f"Procurement workflow completed successfully!")
-            logger.info(f"Total orders: {len(final_orders)}")
-            logger.info(f"Total value: ${total_value:.2f}")
-            
-            # Display final orders
-            print("\n" + "="*60)
-            print("FINAL PROCUREMENT ORDERS")
-            print("="*60)
-            for order in final_orders:
-                print(f"Item: {order['item_name']}")
-                print(f"Vendor: {order['vendor_name']}")
-                print(f"Quantity: {order['quantity']}")
-                print(f"Unit Price: ${order['unit_price']:.2f}")
-                print(f"Total: ${order['total_price']:.2f}")
-                print("-" * 40)
-        else:
-            logger.warning("No quotes were collected or processed")
+        # Initialize components
+        if not self.initialize_components():
+            print("❌ Component initialization failed. Please check errors and restart.")
+            return False
+        
+        # Start ngrok (optional)
+        self.start_ngrok()
+        
+        # Start web server
+        if not self.start_web_server():
+            print("❌ Web server startup failed. Exiting.")
+            return False
+        
+        # Mark as running
+        self.running = True
+        
+        # Show system status
+        self.show_system_status()
+        
+        print("\n🎉 Platform startup complete!")
+        print("🌐 Access the web dashboard to begin managing your procurement operations.")
+        
+        # Start interactive menu
+        try:
+            self.show_interactive_menu()
+        except KeyboardInterrupt:
+            self.shutdown()
+        
+        return True
 
 def main():
-    """Main function to run the procurement automation system"""
-    system = ProcurementAutomationSystem()
+    """Main entry point"""
+    platform = ProcurementPlatform()
     
     try:
-        system.run_procurement_workflow()
-    except KeyboardInterrupt:
-        logger.info("System interrupted by user")
+        success = platform.run()
+        return 0 if success else 1
     except Exception as e:
-        logger.error(f"System error: {str(e)}")
+        print(f"❌ Platform error: {e}")
+        return 1
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main()) 

@@ -1,0 +1,361 @@
+{% extends "dashboard.html" %}
+
+{% block content %}
+<!-- Vendors Statistics -->
+<div class="grid grid-4">
+    <div class="stats-card">
+        <div class="stats-icon">
+            <i class="fas fa-handshake"></i>
+        </div>
+        <div class="stats-content">
+            <div class="stats-number">{{ vendors|length }}</div>
+            <div class="stats-label">Total Vendors</div>
+        </div>
+    </div>
+    <div class="stats-card success">
+        <div class="stats-icon">
+            <i class="fas fa-star"></i>
+        </div>
+        <div class="stats-content">
+            <div class="stats-number">
+                {% if vendors %}
+                    {% set total_rating = 0 %}
+                    {% for vendor in vendors %}
+                        {% set total_rating = total_rating + vendor.rating %}
+                    {% endfor %}
+                    {{ "%.1f"|format(total_rating / vendors|length) }}
+                {% else %}
+                    0.0
+                {% endif %}
+            </div>
+            <div class="stats-label">Average Rating</div>
+        </div>
+    </div>
+    <div class="stats-card info">
+        <div class="stats-icon">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="stats-content">
+            <div class="stats-number">
+                {% set fast_vendors = 0 %}
+                {% for vendor in vendors %}
+                    {% if '24' in vendor.response_time or '12' in vendor.response_time %}
+                        {% set fast_vendors = fast_vendors + 1 %}
+                    {% endif %}
+                {% endfor %}
+                {{ fast_vendors }}
+            </div>
+            <div class="stats-label">24h Response</div>
+        </div>
+    </div>
+    <div class="stats-card warning">
+        <div class="stats-icon">
+            <i class="fas fa-trophy"></i>
+        </div>
+        <div class="stats-content">
+            <div class="stats-number">
+                {% if vendors %}
+                    {% set total_success = 0 %}
+                    {% for vendor in vendors %}
+                        {% set total_success = total_success + vendor.success_rate %}
+                    {% endfor %}
+                    {{ "%.0f"|format(total_success / vendors|length) }}%
+                {% else %}
+                    0%
+                {% endif %}
+            </div>
+            <div class="stats-label">Success Rate</div>
+        </div>
+    </div>
+</div>
+
+<!-- Vendors Management -->
+<div class="card modern-card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-handshake"></i>
+            Vendor Network
+        </h3>
+        <div class="card-actions">
+            <button class="btn btn-success" onclick="openAddVendorModal()">
+                <i class="fas fa-plus"></i>
+                Add Vendor
+            </button>
+            <button class="btn btn-light" onclick="refreshVendors()">
+                <i class="fas fa-sync-alt"></i>
+                Refresh
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="vendors-grid">
+            {% for vendor in vendors %}
+            <div class="vendor-card" data-vendor="{{ vendor.vendor_id }}">
+                <div class="vendor-header">
+                    <div class="vendor-avatar">
+                        {% if 'Laboratory' in vendor.specialties|join(' ') %}
+                            <i class="fas fa-microscope"></i>
+                        {% elif 'Chemical' in vendor.specialties|join(' ') %}
+                            <i class="fas fa-flask"></i>
+                        {% elif 'Medical' in vendor.specialties|join(' ') %}
+                            <i class="fas fa-ambulance"></i>
+                        {% elif 'Equipment' in vendor.specialties|join(' ') %}
+                            <i class="fas fa-tools"></i>
+                        {% else %}
+                            <i class="fas fa-handshake"></i>
+                        {% endif %}
+                    </div>
+                    <div class="vendor-title">
+                        <h4>{{ vendor.name }}</h4>
+                        <div class="vendor-rating">
+                            <span class="stars">
+                                {% for i in range(5) %}
+                                    {% if i < vendor.rating|int %}⭐{% endif %}
+                                {% endfor %}
+                            </span>
+                            <span class="rating-score">{{ vendor.rating }}/5</span>
+                        </div>
+                    </div>
+                    <div class="vendor-status status-{{ vendor.status }}">
+                        {% if vendor.status == 'excellent' %}
+                            <i class="fas fa-certificate"></i>
+                        {% elif vendor.status == 'good' %}
+                            <i class="fas fa-check"></i>
+                        {% else %}
+                            <i class="fas fa-minus-circle"></i>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="vendor-details">
+                    <div class="detail-row">
+                        <i class="fas fa-phone"></i>
+                        <span>{{ vendor.phone }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <i class="fas fa-envelope"></i>
+                        <span>{{ vendor.email }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <i class="fas fa-clock"></i>
+                        <span>{{ vendor.response_time }} response</span>
+                    </div>
+                </div>
+                
+                <div class="vendor-specialties">
+                    {% for specialty in vendor.specialties %}
+                    <span class="specialty-tag">{{ specialty }}</span>
+                    {% endfor %}
+                </div>
+                
+                <div class="vendor-metrics">
+                    <div class="metric-row">
+                        <span class="metric-label">Price:</span>
+                        <span class="pricing-badge {{ vendor.price_competitiveness }}">
+                            {{ vendor.price_competitiveness.replace('_', ' ').title() }}
+                        </span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Success Rate:</span>
+                        <div class="success-bar">
+                            <div class="success-fill" style="width: {{ vendor.success_rate }}%"></div>
+                            <span class="success-text">{{ "%.0f"|format(vendor.success_rate) }}%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="vendor-actions">
+                    <button class="btn btn-primary btn-sm" onclick="viewVendor('{{ vendor.vendor_id }}')">
+                        <i class="fas fa-eye"></i>
+                        View
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="callVendor('{{ vendor.vendor_id }}')">
+                        <i class="fas fa-phone"></i>
+                        Call
+                    </button>
+                    <button class="btn btn-warning btn-sm" onclick="requestQuote('{{ vendor.vendor_id }}')">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        Quote
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+            
+            {% if not vendors %}
+            <div class="vendor-card" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+                <div style="color: var(--gray-600);">
+                    <i class="fas fa-handshake" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                    <h3>No Vendors Found</h3>
+                    <p>Add your first vendor to start building your supplier network.</p>
+                    <button class="btn btn-success" onclick="openAddVendorModal()">
+                        <i class="fas fa-plus"></i>
+                        Add First Vendor
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Vendor Analytics -->
+<div class="grid grid-2">
+    <!-- Performance Comparison -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-chart-bar"></i>
+                Vendor Performance
+            </h3>
+        </div>
+        <div class="card-body">
+            <canvas id="vendor-performance-chart" width="400" height="250"></canvas>
+        </div>
+    </div>
+    
+    <!-- Response Time Analysis -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-stopwatch"></i>
+                Response Time Distribution
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="response-analysis">
+                {% set response_stats = {} %}
+                {% for vendor in vendors %}
+                    {% if '12' in vendor.response_time %}
+                        {% set _ = response_stats.update({'12 Hours': response_stats.get('12 Hours', 0) + 1}) %}
+                    {% elif '24' in vendor.response_time %}
+                        {% set _ = response_stats.update({'24 Hours': response_stats.get('24 Hours', 0) + 1}) %}
+                    {% elif '48' in vendor.response_time %}
+                        {% set _ = response_stats.update({'48 Hours': response_stats.get('48 Hours', 0) + 1}) %}
+                    {% else %}
+                        {% set _ = response_stats.update({'72+ Hours': response_stats.get('72+ Hours', 0) + 1}) %}
+                    {% endif %}
+                {% endfor %}
+                
+                {% for time_range, count in response_stats.items() %}
+                <div class="response-item">
+                    <div class="response-label">{{ time_range }}</div>
+                    <div class="response-bar">
+                        {% set percentage = (count * 100 / vendors|length)|int if vendors else 0 %}
+                        <div class="response-fill 
+                            {% if '12' in time_range %}excellent
+                            {% elif '24' in time_range %}good
+                            {% elif '48' in time_range %}average
+                            {% else %}poor{% endif %}" 
+                            style="width: {{ percentage }}%"></div>
+                    </div>
+                    <div class="response-count">{{ count }} vendor{{ 's' if count != 1 else '' }}</div>
+                </div>
+                {% endfor %}
+                
+                {% if not vendors %}
+                <div class="response-item">
+                    <div style="text-align: center; color: var(--gray-600);">
+                        No vendor data available
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Vendor management functions
+function openAddVendorModal() {
+    app.showToast('Add vendor functionality coming soon', 'info');
+}
+
+function refreshVendors() {
+    app.showLoading(true);
+    setTimeout(() => {
+        location.reload();
+    }, 1000);
+}
+
+function viewVendor(vendorId) {
+    app.showToast(`Viewing ${vendorId} profile`, 'info');
+}
+
+function callVendor(vendorId) {
+    app.openModal('call-modal');
+    app.showToast(`Initiating call to ${vendorId}`, 'success');
+}
+
+function requestQuote(vendorId) {
+    app.showToast(`Quote request sent to ${vendorId}`, 'success');
+}
+
+// Initialize charts with real data
+document.addEventListener('DOMContentLoaded', function() {
+    // Vendor Performance Chart
+    const performanceCtx = document.getElementById('vendor-performance-chart');
+    if (performanceCtx) {
+        const vendors = {{ vendors|tojson }};
+        
+        new Chart(performanceCtx, {
+            type: 'radar',
+            data: {
+                labels: ['Quality', 'Price', 'Speed', 'Reliability', 'Service'],
+                datasets: vendors.slice(0, 3).map((vendor, index) => ({
+                    label: vendor.name,
+                    data: [
+                        vendor.rating * 20, // Quality
+                        vendor.price_competitiveness === 'budget_friendly' ? 90 : vendor.price_competitiveness === 'competitive' ? 75 : 60, // Price
+                        vendor.response_time.includes('12') ? 95 : vendor.response_time.includes('24') ? 85 : vendor.response_time.includes('48') ? 70 : 50, // Speed
+                        vendor.success_rate, // Reliability
+                        vendor.performance_score // Service
+                    ],
+                    borderColor: ['#6366f1', '#10b981', '#f59e0b'][index],
+                    backgroundColor: [`rgba(99, 102, 241, 0.2)`, `rgba(16, 185, 129, 0.2)`, `rgba(245, 158, 11, 0.2)`][index],
+                    borderWidth: 2
+                }))
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    }
+});
+
+// Add hover effects to vendor cards
+document.querySelectorAll('.vendor-card').forEach(card => {
+    card.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-8px) scale(1.02)';
+    });
+    
+    card.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0) scale(1)';
+    });
+});
+
+// Real-time updates
+setInterval(() => {
+    fetch('/api/stats')
+        .then(response => response.json())
+        .then(data => {
+            // Update vendor stats if needed
+            console.log('Vendor stats updated:', data);
+        })
+        .catch(error => console.log('Vendor stats update failed:', error));
+}, 30000);
+</script>
+{% endblock %} 

@@ -1,0 +1,563 @@
+{% extends "dashboard.html" %}
+
+{% block content %}
+<!-- Analytics Overview -->
+<div class="grid grid-4">
+    <div class="stats-card">
+        <div class="stats-icon">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="stats-content">
+            <div class="stats-number">{{ analytics.total_conversations }}</div>
+            <div class="stats-label">Total Conversations</div>
+        </div>
+    </div>
+    <div class="stats-card success">
+        <div class="stats-icon">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="stats-content">
+            <div class="stats-number">{{ analytics.responsive_vendors }}</div>
+            <div class="stats-label">Responsive Vendors</div>
+        </div>
+    </div>
+    <div class="stats-card info">
+        <div class="stats-icon">
+            <i class="fas fa-building"></i>
+        </div>
+        <div class="stats-content">
+            <div class="stats-number">{{ analytics.total_companies }}</div>
+            <div class="stats-label">Active Companies</div>
+        </div>
+    </div>
+    <div class="stats-card warning">
+        <div class="stats-icon">
+            <i class="fas fa-percentage"></i>
+        </div>
+        <div class="stats-content">
+            <div class="stats-number">{{ "{:.1f}".format((analytics.responsive_vendors / analytics.total_conversations * 100) if analytics.total_conversations > 0 else 0) }}%</div>
+            <div class="stats-label">Response Rate</div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Analytics Grid -->
+<div class="grid grid-2">
+    <!-- Conversation Types -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-chart-pie"></i>
+                Conversation Channels
+            </h3>
+            <div class="card-actions">
+                <button class="btn btn-light btn-sm" onclick="refreshConversationData()">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <canvas id="conversation-types-chart" width="400" height="300"></canvas>
+            <div class="chart-legend">
+                {% for type, count in analytics.conversation_types.items() %}
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: {{ ['#3b82f6', '#10b981', '#f59e0b'][loop.index0 % 3] }}"></span>
+                    <span class="legend-label">{{ type.title() }}: {{ count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Budget Analysis -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-chart-bar"></i>
+                Budget Utilization
+            </h3>
+        </div>
+        <div class="card-body">
+            <canvas id="budget-chart" width="400" height="300"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Metrics -->
+<div class="grid grid-3">
+    <!-- Vendor Performance -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-trophy"></i>
+                Top Performing Vendors
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="performance-list">
+                <div class="performance-item">
+                    <div class="vendor-info">
+                        <div class="vendor-name">Lab Supply Pro</div>
+                        <div class="vendor-score">95%</div>
+                    </div>
+                    <div class="performance-bar">
+                        <div class="bar-fill" style="width: 95%"></div>
+                    </div>
+                </div>
+                
+                <div class="performance-item">
+                    <div class="vendor-info">
+                        <div class="vendor-name">Chemical Solutions</div>
+                        <div class="vendor-score">88%</div>
+                    </div>
+                    <div class="performance-bar">
+                        <div class="bar-fill" style="width: 88%"></div>
+                    </div>
+                </div>
+                
+                <div class="performance-item">
+                    <div class="vendor-info">
+                        <div class="vendor-name">Scientific Corp</div>
+                        <div class="vendor-score">82%</div>
+                    </div>
+                    <div class="performance-bar">
+                        <div class="bar-fill" style="width: 82%"></div>
+                    </div>
+                </div>
+                
+                <div class="performance-item">
+                    <div class="vendor-info">
+                        <div class="vendor-name">Medical Supply Chain</div>
+                        <div class="vendor-score">78%</div>
+                    </div>
+                    <div class="performance-bar">
+                        <div class="bar-fill" style="width: 78%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Response Time Analysis -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-clock"></i>
+                Response Times
+            </h3>
+        </div>
+        <div class="card-body">
+            <canvas id="response-time-chart" width="400" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Success Metrics -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-check-circle"></i>
+                Success Metrics
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <div class="metric-value">89%</div>
+                    <div class="metric-label">Call Success Rate</div>
+                </div>
+                
+                <div class="metric-item">
+                    <div class="metric-value">94%</div>
+                    <div class="metric-label">WhatsApp Delivery</div>
+                </div>
+                
+                <div class="metric-item">
+                    <div class="metric-value">76%</div>
+                    <div class="metric-label">Vendor Response</div>
+                </div>
+                
+                <div class="metric-item">
+                    <div class="metric-value">₹2.3L</div>
+                    <div class="metric-label">Savings This Month</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Analytics -->
+<div class="grid grid-2">
+    <!-- Time Series Analysis -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-chart-line"></i>
+                Conversation Trends (Last 30 Days)
+            </h3>
+            <div class="card-actions">
+                <select class="form-control form-control-sm" onchange="updateTimeSeriesChart(this.value)">
+                    <option value="7">Last 7 Days</option>
+                    <option value="30" selected>Last 30 Days</option>
+                    <option value="90">Last 90 Days</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-body">
+            <canvas id="trends-chart" width="400" height="250"></canvas>
+        </div>
+    </div>
+
+    <!-- Geographic Distribution -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-map"></i>
+                Vendor Distribution
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="location-stats">
+                <div class="location-item">
+                    <div class="location-name">Mumbai</div>
+                    <div class="location-bar">
+                        <div class="bar-fill" style="width: 45%"></div>
+                    </div>
+                    <div class="location-count">18 vendors</div>
+                </div>
+                
+                <div class="location-item">
+                    <div class="location-name">Delhi</div>
+                    <div class="location-bar">
+                        <div class="bar-fill" style="width: 30%"></div>
+                    </div>
+                    <div class="location-count">12 vendors</div>
+                </div>
+                
+                <div class="location-item">
+                    <div class="location-name">Bangalore</div>
+                    <div class="location-bar">
+                        <div class="bar-fill" style="width: 25%"></div>
+                    </div>
+                    <div class="location-count">10 vendors</div>
+                </div>
+                
+                <div class="location-item">
+                    <div class="location-name">Other Cities</div>
+                    <div class="location-bar">
+                        <div class="bar-fill" style="width: 15%"></div>
+                    </div>
+                    <div class="location-count">6 vendors</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Insights -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-brain"></i>
+            AI Insights & Recommendations
+        </h3>
+        <div class="card-actions">
+            <button class="btn btn-primary btn-sm" onclick="generateInsights()">
+                <i class="fas fa-magic"></i>
+                Generate New Insights
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="insights-grid">
+            <div class="insight-item insight-success">
+                <div class="insight-icon">
+                    <i class="fas fa-thumbs-up"></i>
+                </div>
+                <div class="insight-content">
+                    <div class="insight-title">High Performance Vendors</div>
+                    <div class="insight-description">
+                        Lab Supply Pro and Chemical Solutions show consistent 90%+ response rates. 
+                        Consider establishing preferred vendor agreements.
+                    </div>
+                </div>
+                <div class="insight-actions">
+                    <button class="btn btn-sm btn-outline-primary">View Details</button>
+                </div>
+            </div>
+            
+            <div class="insight-item insight-warning">
+                <div class="insight-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="insight-content">
+                    <div class="insight-title">Procurement Pattern Alert</div>
+                    <div class="insight-description">
+                        Bio Mac Lifesciences shows 40% increase in urgent procurement requests. 
+                        Consider adjusting minimum stock levels.
+                    </div>
+                </div>
+                <div class="insight-actions">
+                    <button class="btn btn-sm btn-outline-warning">Review Settings</button>
+                </div>
+            </div>
+            
+            <div class="insight-item insight-info">
+                <div class="insight-icon">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <div class="insight-content">
+                    <div class="insight-title">Cost Optimization Opportunity</div>
+                    <div class="insight-description">
+                        WhatsApp fallback conversations show 15% better pricing negotiations. 
+                        Consider WhatsApp-first approach for non-urgent items.
+                    </div>
+                </div>
+                <div class="insight-actions">
+                    <button class="btn btn-sm btn-outline-info">Implement</button>
+                </div>
+            </div>
+            
+            <div class="insight-item insight-primary">
+                <div class="insight-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="insight-content">
+                    <div class="insight-title">Seasonal Trend Detected</div>
+                    <div class="insight-description">
+                        Chemical reagent demands spike 25% in Q4. Schedule bulk orders in Q3 
+                        for better pricing and availability.
+                    </div>
+                </div>
+                <div class="insight-actions">
+                    <button class="btn btn-sm btn-outline-primary">Schedule</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Options -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-download"></i>
+            Export Analytics
+        </h3>
+    </div>
+    <div class="card-body">
+        <div class="export-options">
+            <button class="btn btn-outline-primary" onclick="exportToPDF()">
+                <i class="fas fa-file-pdf"></i>
+                Export PDF Report
+            </button>
+            <button class="btn btn-outline-success" onclick="exportToExcel()">
+                <i class="fas fa-file-excel"></i>
+                Export Excel Data
+            </button>
+            <button class="btn btn-outline-info" onclick="exportToCSV()">
+                <i class="fas fa-file-csv"></i>
+                Export CSV Data
+            </button>
+            <button class="btn btn-outline-warning" onclick="scheduleReport()">
+                <i class="fas fa-calendar"></i>
+                Schedule Reports
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Analytics-specific JavaScript
+function refreshConversationData() {
+    app.showLoading(true);
+    fetch('/api/analytics/refresh')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            app.showToast('Analytics data refreshed', 'success');
+            setTimeout(() => location.reload(), 1000);
+        }
+    })
+    .catch(error => app.showToast('Error refreshing data', 'error'))
+    .finally(() => app.showLoading(false));
+}
+
+function generateInsights() {
+    app.showLoading(true);
+    fetch('/api/analytics/generate-insights', { method: 'POST' })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            app.showToast('New insights generated', 'success');
+            setTimeout(() => location.reload(), 1000);
+        }
+    })
+    .catch(error => app.showToast('Error generating insights', 'error'))
+    .finally(() => app.showLoading(false));
+}
+
+function updateTimeSeriesChart(days) {
+    // Update chart based on selected time period
+    fetch(`/api/analytics/trends?days=${days}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateTrendsChart(data.trends);
+        }
+    })
+    .catch(error => console.error('Error updating trends:', error));
+}
+
+function exportToPDF() {
+    app.showLoading(true);
+    fetch('/api/analytics/export/pdf', { method: 'POST' })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `analytics-report-${new Date().toISOString().split('T')[0]}.pdf`;
+        a.click();
+        app.showToast('PDF report downloaded', 'success');
+    })
+    .catch(error => app.showToast('Export failed', 'error'))
+    .finally(() => app.showLoading(false));
+}
+
+function exportToExcel() {
+    app.showLoading(true);
+    fetch('/api/analytics/export/excel', { method: 'POST' })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `analytics-data-${new Date().toISOString().split('T')[0]}.xlsx`;
+        a.click();
+        app.showToast('Excel file downloaded', 'success');
+    })
+    .catch(error => app.showToast('Export failed', 'error'))
+    .finally(() => app.showLoading(false));
+}
+
+function exportToCSV() {
+    app.showLoading(true);
+    fetch('/api/analytics/export/csv', { method: 'POST' })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `analytics-data-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        app.showToast('CSV file downloaded', 'success');
+    })
+    .catch(error => app.showToast('Export failed', 'error'))
+    .finally(() => app.showLoading(false));
+}
+
+function scheduleReport() {
+    app.showToast('Report scheduling functionality coming soon', 'info');
+}
+
+// Initialize charts
+document.addEventListener('DOMContentLoaded', function() {
+    // Conversation types chart
+    const conversationCtx = document.getElementById('conversation-types-chart');
+    if (conversationCtx) {
+        new Chart(conversationCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [{% for type in analytics.conversation_types.keys() %}'{{ type.title() }}'{% if not loop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for count in analytics.conversation_types.values() %}{{ count }}{% if not loop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+    
+    // Budget chart
+    const budgetCtx = document.getElementById('budget-chart');
+    if (budgetCtx) {
+        new Chart(budgetCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for budget_data in analytics.budget_analysis %}'{{ budget_data.company }}'{% if not loop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Budget',
+                    data: [{% for budget_data in analytics.budget_analysis %}{{ budget_data.budget }}{% if not loop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: '#e5e7eb'
+                }, {
+                    label: 'Estimated Spend',
+                    data: [{% for budget_data in analytics.budget_analysis %}{{ budget_data.estimated_spend }}{% if not loop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: '#3b82f6'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+    
+    // Response time chart
+    const responseCtx = document.getElementById('response-time-chart');
+    if (responseCtx) {
+        new Chart(responseCtx, {
+            type: 'line',
+            data: {
+                labels: ['12h', '24h', '48h', '72h'],
+                datasets: [{
+                    label: 'Response Times',
+                    data: [8, 15, 5, 2],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+    
+    // Trends chart
+    const trendsCtx = document.getElementById('trends-chart');
+    if (trendsCtx) {
+        new Chart(trendsCtx, {
+            type: 'line',
+            data: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                datasets: [{
+                    label: 'Voice Calls',
+                    data: [12, 15, 18, 22],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)'
+                }, {
+                    label: 'WhatsApp',
+                    data: [8, 12, 16, 20],
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,74 @@
+{
+  "bio_mac": {
+    "company_id": "bio_mac",
+    "name": "Bio Mac Lifesciences",
+    "industry": "Biotechnology",
+    "contact_person": "Dr. Rajesh Kumar",
+    "phone": "+918800000488",
+    "email": "procurement@biomac.in",
+    "budget_monthly": 500000.0,
+    "procurement_priority": "quality_first",
+    "inventory": {
+      "microscope_slides": {
+        "item_id": "mic_slides_001",
+        "name": "Microscope Slides",
+        "category": "Laboratory Consumables",
+        "current_stock": 50,
+        "minimum_required": 200,
+        "maximum_capacity": 1000,
+        "unit": "pieces",
+        "priority": "high",
+        "last_ordered": null,
+        "average_price": 2.5,
+        "preferred_vendors": [
+          "lab_supply_pro",
+          "scientific_corp"
+        ]
+      },
+      "petri_dishes": {
+        "item_id": "petri_001",
+        "name": "Petri Dishes",
+        "category": "Laboratory Consumables",
+        "current_stock": 25,
+        "minimum_required": 100,
+        "maximum_capacity": 500,
+        "unit": "pieces",
+        "priority": "high",
+        "last_ordered": null,
+        "average_price": 1.8,
+        "preferred_vendors": [
+          "lab_supply_pro"
+        ]
+      }
+    },
+    "created_at": "2025-06-23T12:07:54.477453"
+  },
+  "pharma_research": {
+    "company_id": "pharma_research",
+    "name": "Pharma Research Institute",
+    "industry": "Pharmaceutical",
+    "contact_person": "Dr. Priya Sharma",
+    "phone": "+918800000499",
+    "email": "purchase@pharmaresearch.in",
+    "budget_monthly": 750000.0,
+    "procurement_priority": "cost_effective",
+    "inventory": {
+      "chemical_reagents": {
+        "item_id": "reagents_001",
+        "name": "Chemical Reagents",
+        "category": "Chemicals",
+        "current_stock": 20,
+        "minimum_required": 50,
+        "maximum_capacity": 200,
+        "unit": "bottles",
+        "priority": "high",
+        "last_ordered": null,
+        "average_price": 450.0,
+        "preferred_vendors": [
+          "chemical_solutions"
+        ]
+      }
+    },
+    "created_at": "2025-06-23T12:07:54.477453"
+  }
+}

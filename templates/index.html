@@ -1,0 +1,414 @@
+{% extends "dashboard.html" %}
+
+{% block content %}
+<!-- Stats Grid -->
+<div class="grid grid-4">
+    <div class="stats-card">
+        <div class="stats-number" id="total-companies">{{ stats.total_companies }}</div>
+        <div class="stats-label">Active Companies</div>
+    </div>
+    <div class="stats-card success">
+        <div class="stats-number" id="total-vendors">{{ stats.total_vendors }}</div>
+        <div class="stats-label">Registered Vendors</div>
+    </div>
+    <div class="stats-card warning">
+        <div class="stats-number" id="critical-items">{{ stats.critical_items }}</div>
+        <div class="stats-label">Critical Items</div>
+    </div>
+    <div class="stats-card danger">
+        <div class="stats-number" id="total-savings">₹{{ "{:,.0f}".format(stats.total_savings) }}</div>
+        <div class="stats-label">Total Savings</div>
+    </div>
+</div>
+
+<!-- Main Content Grid -->
+<div class="grid grid-2">
+    <!-- Procurement Overview -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-shopping-cart"></i>
+                Procurement Overview
+            </h3>
+            <button class="btn btn-light btn-icon" onclick="refreshProcurementData()">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="procurement-summary">
+                <div class="summary-item">
+                    <span class="summary-label">Companies Needing Procurement:</span>
+                    <span class="summary-value">{{ procurement_summary.companies_needing_procurement }}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Urgent Items:</span>
+                    <span class="summary-value">{{ procurement_summary.urgent_items }}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Estimated Cost:</span>
+                    <span class="summary-value">₹{{ "{:,.2f}".format(procurement_summary.total_estimated_cost) }}</span>
+                </div>
+            </div>
+            
+            {% if procurement_summary.companies_needing_procurement > 0 %}
+            <div class="progress-section">
+                <h4>Budget Utilization</h4>
+                {% for company_id, budget_data in procurement_summary.budget_utilization.items() %}
+                <div class="budget-item">
+                    <div class="budget-label">{{ budget_data.company_name }}</div>
+                    <div class="progress">
+                        <div class="progress-bar" style="width: {{ budget_data.usage_percentage }}%"></div>
+                    </div>
+                    <div class="budget-percentage">{{ "{:.1f}".format(budget_data.usage_percentage) }}%</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        <div class="card-footer">
+            <a href="/procurement" class="btn btn-primary">
+                <i class="fas fa-chart-line"></i>
+                View Full Analysis
+            </a>
+        </div>
+    </div>
+
+    <!-- Communication Status -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-phone"></i>
+                Communication Center
+            </h3>
+            <div class="status-indicators">
+                <span class="badge badge-success" id="comm-status">Online</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="comm-stats">
+                <div class="stat-row">
+                    <span class="stat-icon"><i class="fas fa-phone-alt"></i></span>
+                    <span class="stat-label">Active Calls</span>
+                    <span class="stat-value" id="active-calls">{{ stats.active_conversations }}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-icon"><i class="fas fa-whatsapp"></i></span>
+                    <span class="stat-label">WhatsApp Conversations</span>
+                    <span class="stat-value" id="whatsapp-conversations">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-icon"><i class="fas fa-chart-line"></i></span>
+                    <span class="stat-label">Success Rate</span>
+                    <span class="stat-value" id="success-rate">85%</span>
+                </div>
+            </div>
+            
+            <div class="recent-activity">
+                <h4>Recent Activity</h4>
+                <div id="activity-list">
+                    <div class="activity-item">
+                        <i class="fas fa-phone text-success"></i>
+                        <span>Call initiated to Lab Supply Pro</span>
+                        <small>2 minutes ago</small>
+                    </div>
+                    <div class="activity-item">
+                        <i class="fas fa-whatsapp text-info"></i>
+                        <span>WhatsApp sent to +91880000222</span>
+                        <small>5 minutes ago</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <a href="/communication" class="btn btn-info">
+                <i class="fas fa-headset"></i>
+                Communication Center
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Companies Overview -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-building"></i>
+            Companies Overview
+        </h3>
+        <button class="btn btn-light btn-icon" onclick="refreshCompaniesData()">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Company</th>
+                        <th>Industry</th>
+                        <th>Budget</th>
+                        <th>Inventory Status</th>
+                        <th>Priority</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for company_id, company in companies.items() %}
+                    <tr data-company-id="{{ company_id }}">
+                        <td>
+                            <div class="company-info">
+                                <strong>{{ company.name }}</strong><br>
+                                <small>{{ company.contact_person }}</small>
+                            </div>
+                        </td>
+                        <td>{{ company.industry }}</td>
+                        <td>₹{{ "{:,.0f}".format(company.budget_monthly) }}</td>
+                        <td>
+                            {% set low_stock = company.get_low_stock_items() %}
+                            {% if low_stock|length > 0 %}
+                                <span class="badge badge-warning">{{ low_stock|length }} Low Stock</span>
+                            {% else %}
+                                <span class="badge badge-success">Normal</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-info">{{ company.procurement_priority.replace('_', ' ').title() }}</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="initiateCallForCompany('{{ company_id }}')">
+                                <i class="fas fa-phone"></i>
+                            </button>
+                            <button class="btn btn-sm btn-success" onclick="sendWhatsAppForCompany('{{ company_id }}')">
+                                <i class="fas fa-whatsapp"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <a href="/companies" class="btn btn-primary">
+            <i class="fas fa-building"></i>
+            Manage Companies
+        </a>
+        <a href="/procurement" class="btn btn-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            View Urgent Items
+        </a>
+    </div>
+</div>
+
+<!-- Quick Analytics -->
+<div class="grid grid-2">
+    <!-- Budget Chart -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-chart-pie"></i>
+                Budget Utilization
+            </h3>
+        </div>
+        <div class="card-body">
+            <canvas id="budget-chart" width="400" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Trends Chart -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-chart-line"></i>
+                Procurement Trends
+            </h3>
+        </div>
+        <div class="card-body">
+            <canvas id="trends-chart" width="400" height="200"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Dashboard-specific JavaScript
+function refreshProcurementData() {
+    app.showLoading(true);
+    fetch('/api/procurement/analyze', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                app.showToast('Procurement data refreshed', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                app.showToast('Failed to refresh data', 'error');
+            }
+        })
+        .catch(error => {
+            app.showToast('Error refreshing data', 'error');
+        })
+        .finally(() => {
+            app.showLoading(false);
+        });
+}
+
+function refreshCompaniesData() {
+    // Refresh companies data
+    fetch('/api/companies')
+        .then(response => response.json())
+        .then(data => {
+            app.showToast('Companies data refreshed', 'success');
+            // Update table if needed
+        })
+        .catch(error => {
+            app.showToast('Error refreshing companies', 'error');
+        });
+}
+
+function initiateCallForCompany(companyId) {
+    // Pre-fill call modal with company
+    const companySelect = document.getElementById('company-select');
+    if (companySelect) {
+        companySelect.value = companyId;
+    }
+    app.openModal('call-modal');
+}
+
+function sendWhatsAppForCompany(companyId) {
+    // Show WhatsApp modal for specific company
+    app.openModal('whatsapp-modal');
+}
+
+// Real-time updates for dashboard
+function updateDashboardStats(stats) {
+    document.getElementById('total-companies').textContent = stats.total_companies;
+    document.getElementById('total-vendors').textContent = stats.total_vendors;
+    document.getElementById('active-calls').textContent = stats.active_conversations;
+    
+    const savingsElement = document.getElementById('total-savings');
+    if (savingsElement) {
+        savingsElement.textContent = '₹' + stats.total_savings.toLocaleString();
+    }
+}
+
+// Auto-refresh dashboard every 30 seconds
+setInterval(() => {
+    fetch('/api/stats')
+        .then(response => response.json())
+        .then(stats => {
+            updateDashboardStats(stats);
+        })
+        .catch(error => {
+            console.error('Error updating stats:', error);
+        });
+}, 30000);
+
+// Initialize charts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Budget chart will be initialized by main.js if data is available
+    
+    // Add custom dashboard styling
+    const style = document.createElement('style');
+    style.textContent = `
+        .procurement-summary {
+            margin-bottom: 1rem;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .summary-label {
+            font-weight: 500;
+        }
+        
+        .summary-value {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .budget-item {
+            margin: 1rem 0;
+        }
+        
+        .budget-label {
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .budget-percentage {
+            text-align: right;
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+        }
+        
+        .comm-stats {
+            margin-bottom: 1.5rem;
+        }
+        
+        .stat-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .stat-icon {
+            width: 24px;
+            text-align: center;
+            color: var(--secondary-color);
+        }
+        
+        .stat-label {
+            flex: 1;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .activity-item i {
+            width: 16px;
+        }
+        
+        .activity-item small {
+            margin-left: auto;
+            color: #666;
+        }
+        
+        .company-info strong {
+            color: var(--primary-color);
+        }
+        
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+            margin: 0 0.125rem;
+        }
+        
+        .text-success {
+            color: var(--success-color) !important;
+        }
+        
+        .text-info {
+            color: var(--info-color) !important;
+        }
+    `;
+    document.head.appendChild(style);
+});
+</script>
+{% endblock %} 

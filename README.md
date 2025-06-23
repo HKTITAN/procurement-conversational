@@ -1,183 +1,341 @@
-# Likwid.AI Procurement Automation System
+# 🏭 Multi-Company Procurement Platform
 
-An intelligent voice-driven procurement automation system that uses Twilio's ConversationRelay API to handle end-to-end purchasing through natural voice conversations with vendors.
+An intelligent, AI-powered procurement management system with real-time voice communication, WhatsApp integration, and comprehensive analytics. Built with a modern, scalable architecture using Flask, Gemini AI, and Twilio.
 
-## Overview
+## 🌟 Key Features
 
-This system automates the procurement process for **Bio Mac Lifesciences** by:
+### 📊 **Multi-Company Management**
+- Manage inventory across multiple companies
+- Real-time stock monitoring and shortage detection
+- Automated budget tracking and utilization analysis
+- Company-specific procurement priorities
 
-1. **Reading inventory data** to identify low or out-of-stock items
-2. **Generating procurement requirements** automatically
-3. **Initiating voice conversations** with vendors using AI
-4. **Collecting quotes** through natural dialogue
-5. **Comparing prices** and generating optimal purchase orders
+### 🤖 **AI-Powered Intelligence**
+- Gemini AI integration for dynamic conversation generation
+- Intelligent vendor information extraction
+- Automated response generation with fallback mechanisms
+- Context-aware conversation management
 
-## Features
+### 📞 **Advanced Communication**
+- **Voice Calls**: Automated Twilio-powered voice calls with speech recognition
+- **WhatsApp Integration**: Two-way WhatsApp messaging with auto-fallback
+- **Real-time Tracking**: Live conversation monitoring and status updates
+- **Multi-channel Strategy**: Voice-to-WhatsApp fallback for failed calls
 
-- 🎤 **Voice-First Workflow**: Natural conversations with vendors via Twilio ConversationRelay
-- 📊 **Intelligent Inventory Management**: Automatic detection of low-stock items
-- 💰 **Real-time Quote Collection**: AI extracts and logs pricing during calls
-- 🔄 **Automated Comparison**: Finds best prices across vendors
-- 📋 **Order Generation**: Creates final purchase orders with optimal selections
-- 🌐 **Webhook Integration**: Real-time data processing during conversations
+### 🛒 **Intelligent Procurement**
+- Automated inventory analysis and shortage detection
+- AI-powered vendor matching and recommendation
+- Price comparison and negotiation assistance
+- Risk assessment and budget optimization
 
-## System Architecture
+### 🌐 **Modern Web Dashboard**
+- Real-time analytics with interactive charts
+- Responsive design with mobile support
+- Live updates via WebSocket connections
+- Comprehensive company and vendor management
+
+## 🏗️ Architecture Overview
+
+### **Modular Design**
+The platform is built with a clean, modular architecture:
 
 ```
-Inventory.csv → Requirements.csv → AI Voice Call → Quotes.csv → Final_Orders.csv
-     ↓              ↓                    ↓             ↓              ↓
-  Low Stock    Procurement       Natural Voice    Price Logging   Best Prices
-  Detection    Requirements      Conversation     via Webhooks    & Orders
+procurement-platform/
+├── models.py           # Data structures and models
+├── database.py         # Data persistence and management
+├── ai_services.py      # Gemini AI integration
+├── communication.py    # Twilio voice & WhatsApp handling
+├── procurement.py      # Business logic and analysis
+├── web_server.py       # Flask web application
+├── main.py            # Platform orchestrator
+├── templates/         # HTML templates
+│   ├── dashboard.html # Base template
+│   └── index.html     # Dashboard page
+├── static/           # CSS and JavaScript
+│   ├── css/style.css # Modern styling
+│   └── js/main.js    # Frontend functionality
+└── data/             # Data storage (auto-created)
 ```
 
-## Setup Instructions
+### **Core Components**
 
-### 1. Install Dependencies
+#### 🗃️ **Data Layer (`models.py`, `database.py`)**
+- **Thread-safe data management** with JSON persistence
+- **Comprehensive models**: Companies, Vendors, Inventory, Conversations
+- **Automatic data backup** and CSV export capabilities
+- **Error handling and recovery** mechanisms
 
+#### 🤖 **AI Services (`ai_services.py`)**
+- **Gemini AI integration** with intelligent fallbacks
+- **Dynamic content generation** for calls and messages
+- **Information extraction** from vendor responses
+- **Context-aware conversation** management
+
+#### 📞 **Communication (`communication.py`)**
+- **Twilio voice calls** with speech recognition (Hindi/English)
+- **WhatsApp messaging** with automatic formatting
+- **Call status tracking** and real-time updates
+- **Fallback mechanisms** for failed communications
+
+#### 🛒 **Procurement Engine (`procurement.py`)**
+- **Intelligent shortage detection** with urgency classification
+- **Vendor scoring and ranking** algorithms
+- **Budget analysis** and cost optimization
+- **Risk assessment** and procurement recommendations
+
+#### 🌐 **Web Server (`web_server.py`)**
+- **Flask web application** with comprehensive routing
+- **RESTful API** endpoints for all operations
+- **WebSocket support** for real-time updates
+- **Webhook handlers** for Twilio integration
+
+## 🚀 Quick Start
+
+### **Prerequisites**
+- Python 3.8 or higher
+- Twilio account (for voice/WhatsApp features)
+- Gemini AI API key (for dynamic content)
+- ngrok (for webhook tunneling)
+
+### **Installation**
+
+1. **Clone and setup:**
 ```bash
+git clone <repository-url>
+cd procurement-conversational
 pip install -r requirements.txt
 ```
 
-### 2. Configure Webhook URL
-
-You'll need to expose your local server to the internet for Twilio webhooks. Use ngrok:
-
+2. **Environment Configuration:**
+Create a `.env` file or set environment variables:
 ```bash
-# Install ngrok (if not already installed)
-# Download from https://ngrok.com/
-
-# Start ngrok tunnel
-ngrok http 5000
-
-# Copy the HTTPS URL (e.g., https://abc123.ngrok.io)
+export GEMINI_API_KEY="your_gemini_api_key"
+export TWILIO_ACCOUNT_SID="your_twilio_sid"
+export TWILIO_AUTH_TOKEN="your_twilio_token"
+export TWILIO_FROM_NUMBER="+1234567890"
+export TWILIO_WHATSAPP_NUMBER="whatsapp:+14155238886"
 ```
 
-### 3. Update Webhook URLs
-
-In `main.py`, replace the placeholder URLs with your ngrok URL:
-
-```python
-# Line ~125 and ~145
-"webhook_url": "https://your-actual-ngrok-url.ngrok.io/webhook/quote"
-url='https://your-actual-ngrok-url.ngrok.io/webhook/voice'
-```
-
-### 4. Twilio Configuration
-
-The system is pre-configured with the provided Twilio credentials:
-- **Account SID**: `AC820daae89092e30fee3487e80162d2e2`
-- **Auth Token**: `690636dcdd752868f4e77648dc0d49eb`
-- **Phone Number**: `+14323484517`
-- **API Key SID**: `SKd4e4a70facd2bceb446e402b062fed07`
-
-## Running the System
-
-### Quick Start
-
+3. **Start the Platform:**
 ```bash
 python main.py
 ```
 
-### Step-by-Step Process
+### **First Launch Experience**
 
-1. **Inventory Analysis**: System reads `inventory.csv` and identifies items below minimum threshold
-2. **Requirements Generation**: Creates `requirements.csv` with procurement needs
-3. **Webhook Server**: Starts Flask server on port 5000 for real-time data processing
-4. **Voice Conversation**: Initiates AI-powered call to vendor (Harshit Khemani: +918800000488)
-5. **Quote Collection**: AI extracts pricing information and logs to `quotes.csv`
-6. **Order Optimization**: Compares quotes and generates `final_orders.csv` with best prices
+The platform will automatically:
+- ✅ Validate your environment and dependencies
+- ✅ Initialize all components with comprehensive error handling
+- ✅ Create sample companies and vendors for testing
+- ✅ Start the web server on `http://localhost:5000`
+- ✅ Attempt to start ngrok tunnel for webhook access
+- ✅ Show comprehensive system status
 
-## File Structure
+## 🎛️ Usage Guide
+
+### **Interactive Control Center**
+
+The platform provides a comprehensive control center with 14 options:
+
+1. **📊 System Status** - Health check and component status
+2. **🏢 View Companies** - Company inventory and status overview
+3. **🤝 View Vendors** - Vendor performance and ratings
+4. **🛒 Procurement Analysis** - Real-time shortage analysis
+5. **📞 Test Voice Calls** - Test Twilio voice functionality
+6. **📱 Test WhatsApp** - Test WhatsApp integration
+7. **💬 View Conversations** - Recent AI conversation logs
+8. **📈 Analytics Dashboard** - Open web dashboard
+9. **🔧 System Configuration** - View environment settings
+10. **🌐 Web Dashboard** - Open browser dashboard
+11. **📋 Export Data** - Export to CSV format
+12. **🔄 Restart Components** - Component management
+13. **❓ Help** - Comprehensive help documentation
+14. **🛑 Shutdown** - Graceful platform shutdown
+
+### **Web Dashboard Access**
+
+- **Local**: `http://localhost:5000`
+- **Public** (if ngrok): Automatically displayed during startup
+- **Mobile-friendly**: Responsive design for all devices
+
+### **API Endpoints**
+
+The platform exposes comprehensive RESTful APIs:
 
 ```
-procurement-conversational/
-├── main.py                 # Main application
-├── requirements.txt        # Python dependencies
-├── inventory.csv          # Current inventory levels
-├── requirements.csv       # Generated procurement needs
-├── quotes.csv            # Collected quotes from vendors
-├── final_orders.csv      # Optimized purchase orders
-└── README.md             # This documentation
+GET  /api/stats              # System statistics
+GET  /api/companies          # Company data
+GET  /api/vendors            # Vendor information
+POST /api/calls/initiate     # Start voice call
+POST /api/whatsapp/send      # Send WhatsApp message
+POST /api/procurement/analyze # Run procurement analysis
+GET  /api/calls/{sid}/status # Call status tracking
 ```
 
-## CSV File Formats
+## 🔧 Configuration
 
-### inventory.csv
-```csv
-item_name,current_stock,minimum_threshold,buffer_stock,category,specifications
-Petri Dishes (100mm),5,20,15,Lab Supplies,Sterile polystyrene with lid
+### **Twilio Setup**
+1. Create a [Twilio account](https://twilio.com)
+2. Get your Account SID and Auth Token
+3. Purchase a phone number for voice calls
+4. Enable WhatsApp sandbox or get approved number
+
+### **Gemini AI Setup**
+1. Get API key from [Google AI Studio](https://makersuite.google.com)
+2. Set the `GEMINI_API_KEY` environment variable
+3. The system includes comprehensive fallbacks if AI is unavailable
+
+### **ngrok Setup (Optional)**
+1. Install [ngrok](https://ngrok.com)
+2. The platform will auto-start ngrok for webhook access
+3. Manual URL configuration is supported
+
+## 📊 Sample Data
+
+The platform includes comprehensive sample data:
+
+### **Companies**
+- **Bio Mac Lifesciences** (Biotech, ₹5L budget)
+- **Pharma Research Institute** (Pharmaceutical, ₹7.5L budget)  
+- **Advanced Medical Diagnostics** (Healthcare, ₹3L budget)
+
+### **Vendors**
+- **Lab Supply Pro** (4.5★, Laboratory Consumables)
+- **Scientific Corporation** (4.2★, Chemicals & Equipment)
+- **Chemical Solutions Ltd** (4.7★, Laboratory Chemicals)
+- **Medical Supply Chain** (4.3★, Medical Supplies)
+- **Lab Equipment Ltd** (3.9★, Laboratory Equipment)
+
+### **Inventory Items**
+Complete inventory with stock levels, pricing, and procurement requirements across all categories.
+
+## 🚨 Error Handling & Fallbacks
+
+### **Comprehensive Error Management**
+- **Database**: Automatic backup and recovery
+- **AI Services**: Predefined fallback responses
+- **Communication**: WhatsApp fallback for failed calls
+- **Web Server**: Graceful error pages and API responses
+- **Platform**: Automatic component restart and health monitoring
+
+### **Fallback Mechanisms**
+- **AI Unavailable**: Pre-defined intelligent responses
+- **Twilio Errors**: Detailed error reporting and retry logic
+- **Network Issues**: Offline mode with data sync
+- **Component Failures**: Isolated error handling
+
+## 🔍 Monitoring & Analytics
+
+### **Real-time Monitoring**
+- Live conversation tracking
+- System health monitoring
+- Performance metrics
+- Budget utilization alerts
+
+### **Analytics Dashboard**
+- Interactive charts and graphs
+- Procurement trend analysis
+- Vendor performance metrics
+- Company-wise breakdowns
+
+## 🛠️ Development
+
+### **Architecture Principles**
+- **Modular Design**: Clean separation of concerns
+- **Error Resilience**: Comprehensive error handling
+- **Scalability**: Thread-safe, stateless design
+- **Maintainability**: Clear documentation and structure
+
+### **Adding New Features**
+1. **Models**: Add data structures to `models.py`
+2. **Business Logic**: Implement in appropriate service modules
+3. **API Endpoints**: Add routes to `web_server.py`
+4. **Frontend**: Update templates and JavaScript
+5. **Testing**: Use the interactive control center
+
+### **Database Schema**
+The platform uses a flexible JSON-based schema with automatic migrations and backup.
+
+## 📈 Performance
+
+### **Optimizations**
+- Efficient data structures with caching
+- Asynchronous communication handling
+- Real-time updates via WebSockets
+- Lazy loading and pagination
+
+### **Scalability**
+- Thread-safe operations
+- Modular component architecture
+- RESTful API design
+- Horizontal scaling ready
+
+## 🔐 Security
+
+### **Data Protection**
+- Environment variable configuration
+- Secure credential handling
+- Input validation and sanitization
+- Error message sanitization
+
+### **Communication Security**
+- Twilio webhook validation
+- Secure API endpoints
+- HTTPS support (with proper deployment)
+
+## 🚀 Deployment
+
+### **Production Deployment**
+1. Set up proper environment variables
+2. Configure reverse proxy (nginx)
+3. Use WSGI server (gunicorn)
+4. Set up SSL certificates
+5. Configure domain for webhooks
+
+### **Docker Support**
+```dockerfile
+# Dockerfile example for containerization
+FROM python:3.9-slim
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["python", "main.py"]
 ```
 
-### requirements.csv (Generated)
-```csv
-item_name,required_quantity,category,specifications,priority
-Petri Dishes (100mm),30,Lab Supplies,Sterile polystyrene with lid,Medium
-```
+## 🤝 Contributing
 
-### quotes.csv (Generated)
-```csv
-timestamp,vendor_name,item_name,price,quantity,call_sid,raw_text
-2024-01-15T10:30:00,Harshit Khemani,Petri Dishes,2.50,30,CAxxxx,That's $2.50 per dish
-```
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
 
-### final_orders.csv (Generated)
-```csv
-item_name,vendor_name,quantity,unit_price,total_price,order_date,status
-Petri Dishes (100mm),Harshit Khemani,30,2.50,75.00,2024-01-15T10:35:00,Ready to Order
-```
+## 📝 License
 
-## AI Conversation Flow
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-The AI assistant conducts natural conversations with vendors:
+## 🆘 Support
 
-1. **Introduction**: "Hi, this is an AI assistant calling on behalf of Bio Mac Lifesciences..."
-2. **Item Inquiry**: "We're looking to order some lab supplies. Do you have Petri Dishes available?"
-3. **Quantity Discussion**: "We need about 30 units. What's your pricing for that quantity?"
-4. **Quote Confirmation**: "So that's $2.50 per dish for 30 units, correct?"
-5. **Additional Items**: Naturally transitions to next items on the list
-6. **Closing**: Thanks vendor and confirms next steps
+### **Troubleshooting**
+- Use the system status check (#1 in control center)
+- Verify environment variables and API keys
+- Check network connectivity for webhooks
+- Review logs in the control center
 
-## Webhook Endpoints
+### **Common Issues**
+- **Twilio calls failing**: Check credentials and phone number format
+- **AI responses generic**: Verify Gemini API key
+- **Webhooks not working**: Ensure ngrok is running
+- **Database errors**: Check file permissions in data directory
 
-- **GET /health**: System health check
-- **POST /webhook/voice**: Handles voice conversation updates from ConversationRelay
-- **POST /webhook/quote**: Processes quote data during conversations
-
-## Demo Configuration
-
-**Client**: Bio Mac Lifesciences  
-**Test Vendor**: Harshit Khemani (+918800000488)  
-**Demo Items**: Laboratory supplies (see inventory.csv)
-
-## Troubleshooting
-
-### Common Issues
-
-1. **"Inventory file not found"**: Ensure `inventory.csv` exists in the project directory
-2. **Webhook timeout**: Verify ngrok is running and URLs are updated in code
-3. **Twilio authentication error**: Check that credentials are correctly configured
-
-### Logs
-
-The system provides detailed logging:
-- INFO: Normal operations and workflow progress
-- ERROR: Issues with file operations, API calls, or data processing
-- DEBUG: Detailed conversation and webhook data
-
-## Production Considerations
-
-For production deployment:
-
-1. **Environment Variables**: Move credentials to environment variables
-2. **Database Integration**: Replace CSV files with proper database
-3. **Error Handling**: Implement comprehensive error recovery
-4. **Scaling**: Add support for multiple vendors and concurrent calls
-5. **Security**: Implement webhook authentication and rate limiting
-
-## Support
-
-For technical support or questions about the Likwid.AI Procurement Automation System, please contact the development team.
+### **Getting Help**
+- Check the help documentation (#13 in control center)
+- Review error messages in the platform logs
+- Use the interactive troubleshooting tools
+- Check component health status
 
 ---
 
-**Powered by Likwid.AI** - Transforming procurement through intelligent automation 
+**🎉 Built with ❤️ for efficient procurement management**
+
+Transform your procurement operations with AI-powered intelligence, real-time communication, and comprehensive analytics. The platform scales from small businesses to enterprise operations with its modular, resilient architecture. 

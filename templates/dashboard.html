@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ title or 'Likwid.AI - Smart Procurement Platform' }}{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzMzNzNkYyIvPgo8cGF0aCBkPSJNOCAxMkgxNlYxNkg4VjEyWiIgZmlsbD0id2hpdGUiLz4KPHA+PC9wYXRoPgo8L3N2Zz4K">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    {% block styles %}{% endblock %}
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                                  <a href="/" class="brand-link">
+                      <i class="fas fa-brain"></i>
+                      <span>Likwid.AI</span>
+                  </a>
+            </div>
+            
+            <div class="nav-menu" id="nav-menu">
+                <a href="/" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+                    <i class="fas fa-home"></i>
+                    Dashboard
+                </a>
+                <a href="/companies" class="nav-link {% if active_page == 'companies' %}active{% endif %}">
+                    <i class="fas fa-building"></i>
+                    Companies
+                </a>
+                <a href="/vendors" class="nav-link {% if active_page == 'vendors' %}active{% endif %}">
+                    <i class="fas fa-handshake"></i>
+                    Vendors
+                </a>
+                <a href="/procurement" class="nav-link {% if active_page == 'procurement' %}active{% endif %}">
+                    <i class="fas fa-shopping-cart"></i>
+                    Procurement
+                </a>
+                <a href="/communication" class="nav-link {% if active_page == 'communication' %}active{% endif %}">
+                    <i class="fas fa-phone"></i>
+                    Communication
+                </a>
+                <a href="/analytics" class="nav-link {% if active_page == 'analytics' %}active{% endif %}">
+                    <i class="fas fa-chart-bar"></i>
+                    Analytics
+                </a>
+            </div>
+            
+            <div class="nav-actions">
+                <button class="btn btn-icon" onclick="app.toggleTheme()" title="Toggle Theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="btn btn-icon" onclick="app.refreshData()" title="Refresh Data">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button class="btn btn-primary" onclick="app.openModal('call-modal')" title="Make Call">
+                    <i class="fas fa-phone"></i>
+                    Call
+                </button>
+                <button class="nav-toggle" onclick="app.toggleNav()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Page Header -->
+            {% if title %}
+            <div class="page-header">
+                <div class="page-title">
+                    {% if page_icon %}
+                    <i class="fas fa-{{ page_icon }}"></i>
+                    {% endif %}
+                    <h1>{{ title }}</h1>
+                </div>
+                
+                {% if page_actions %}
+                <div class="page-actions">
+                    {% for action in page_actions %}
+                    <button class="btn btn-{{ action.type }}" onclick="{{ action.onclick }}">
+                        <i class="fas fa-{{ action.icon }}"></i>
+                        {{ action.label }}
+                    </button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <!-- Alerts -->
+            <div id="alerts-container">
+                {% if alerts %}
+                    {% for alert in alerts %}
+                    <div class="alert alert-{{ alert.type }}" role="alert">
+                        <i class="fas fa-{{ alert.icon }}"></i>
+                        <span>{{ alert.message }}</span>
+                        <button class="alert-close" onclick="this.parentElement.remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            
+            <!-- Page Content -->
+            {% block content %}
+            <!-- Default content if no specific content is provided -->
+            <div class="welcome-message">
+                <h2>Welcome to Likwid.AI</h2>
+                <p>Manage your inventory, vendors, and procurement processes efficiently.</p>
+            </div>
+            {% endblock %}
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <!-- Call Modal -->
+    <div id="call-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Initiate Voice Call</h3>
+                <button class="modal-close" onclick="app.closeModal('call-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="call-form">
+                    <div class="form-group">
+                        <label for="company-select">Company</label>
+                        <select id="company-select" class="form-control" required>
+                            <option value="">Select Company</option>
+                            {% if companies %}
+                                {% for company_id, company in companies.items() %}
+                                <option value="{{ company_id }}">{{ company.name }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone-number">Phone Number</label>
+                        <input type="tel" id="phone-number" class="form-control" placeholder="+91XXXXXXXXXX" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="call-priority">Priority</label>
+                        <select id="call-priority" class="form-control">
+                            <option value="normal">Normal</option>
+                            <option value="urgent">Urgent</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="app.closeModal('call-modal')">Cancel</button>
+                <button type="submit" form="call-form" class="btn btn-primary">
+                    <i class="fas fa-phone"></i>
+                    Start Call
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WhatsApp Modal -->
+    <div id="whatsapp-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Send WhatsApp Message</h3>
+                <button class="modal-close" onclick="app.closeModal('whatsapp-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="whatsapp-form">
+                    <div class="form-group">
+                        <label for="whatsapp-phone">Phone Number</label>
+                        <input type="tel" id="whatsapp-phone" class="form-control" placeholder="+91XXXXXXXXXX" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="whatsapp-message">Message</label>
+                        <textarea id="whatsapp-message" class="form-control" rows="4" placeholder="Enter custom message or leave blank for AI-generated message"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="app.closeModal('whatsapp-modal')">Cancel</button>
+                <button type="submit" form="whatsapp-form" class="btn btn-success">
+                    <i class="fas fa-whatsapp"></i>
+                    Send Message
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <p>&copy; 2024 Likwid.AI. Smart Procurement & Inventory Management Platform.</p>
+                </div>
+                <div class="footer-section">
+                    <div class="footer-links">
+                        <a href="/health" target="_blank">System Health</a>
+                        <a href="#" onclick="app.showHelp()">Help</a>
+                        <a href="#" onclick="app.showAbout()">About</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <div class="status-indicator">
+                        <span class="status-dot" id="connection-status"></span>
+                        <span id="connection-text">Connected</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Core JavaScript -->
+    <script src="/static/js/main.js"></script>
+    
+    <!-- Socket.IO for real-time updates -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    
+    <!-- Page-specific scripts -->
+    {% block scripts %}{% endblock %}
+    
+    <!-- Initialize App -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wait a bit for main.js to load and create the app
+            setTimeout(function() {
+                // Initialize real-time updates with Socket.IO
+                if (typeof io !== 'undefined' && typeof app !== 'undefined') {
+                    try {
+                        const socket = io();
+                        
+                        socket.on('connect', function() {
+                            console.log('Connected to server');
+                            app.updateConnectionStatus(true);
+                        });
+                        
+                        socket.on('disconnect', function() {
+                            console.log('Disconnected from server');
+                            app.updateConnectionStatus(false);
+                        });
+                        
+                        socket.on('new_conversation', function(data) {
+                            if (app.handleNewConversation) {
+                                app.handleNewConversation(data);
+                            }
+                        });
+                        
+                        // Store socket for global access
+                        window.socket = socket;
+                        console.log('Socket.IO initialized successfully');
+                    } catch (error) {
+                        console.error('Error initializing Socket.IO:', error);
+                    }
+                } else {
+                    console.warn('Socket.IO or app not available');
+                    if (typeof app !== 'undefined' && app.updateConnectionStatus) {
+                        app.updateConnectionStatus(false);
+                    }
+                }
+            }, 100);
+        });
+        
+        // Add missing global functions that might be called from templates
+        window.makeCall = function() {
+            console.log('🔧 DEBUG: makeCall() called');
+            if (typeof app !== 'undefined' && app.openModal) {
+                console.log('🔧 DEBUG: Opening call modal');
+                app.openModal('call-modal');
+            } else {
+                console.error('🔧 DEBUG: app or app.openModal not available');
+            }
+        };
+        
+        window.sendWhatsApp = function() {
+            console.log('🔧 DEBUG: sendWhatsApp() called');
+            if (typeof app !== 'undefined' && app.openModal) {
+                console.log('🔧 DEBUG: Opening WhatsApp modal');
+                app.openModal('whatsapp-modal');
+            } else {
+                console.error('🔧 DEBUG: app or app.openModal not available');
+            }
+        };
+        
+        window.runAnalysis = function() {
+            console.log('🔧 DEBUG: runAnalysis() called');
+            if (typeof app !== 'undefined' && app.runProcurementAnalysis) {
+                app.runProcurementAnalysis();
+            } else {
+                console.error('🔧 DEBUG: app or app.runProcurementAnalysis not available');
+            }
+        };
+        
+        // Fix modal button handlers
+        window.initiateCall = function() {
+            console.log('🔧 DEBUG: initiateCall() called - form should submit automatically');
+            const form = document.getElementById('call-form');
+            if (form && typeof app !== 'undefined') {
+                console.log('🔧 DEBUG: Found form, submitting manually');
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+                console.log('🔧 DEBUG: Form data extracted:', data);
+                app.handleCallForm(data);
+            } else {
+                console.error('🔧 DEBUG: Form not found or app not available');
+            }
+        };
+        
+        window.sendWhatsAppMessage = function() {
+            console.log('🔧 DEBUG: sendWhatsAppMessage() called - form should submit automatically');
+            const form = document.getElementById('whatsapp-form');
+            if (form && typeof app !== 'undefined') {
+                console.log('🔧 DEBUG: Found WhatsApp form, submitting manually');
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+                console.log('🔧 DEBUG: WhatsApp form data extracted:', data);
+                app.handleWhatsAppForm(data);
+            } else {
+                console.error('🔧 DEBUG: WhatsApp form not found or app not available');
+            }
+        };
+    </script>
+</body>
+</html> 
